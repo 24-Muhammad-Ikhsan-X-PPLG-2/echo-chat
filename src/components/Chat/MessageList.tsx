@@ -27,7 +27,7 @@ const MessageList: FC<MessageListProps> = ({
 
   useEffect(() => {
     const container = containerRef.current;
-
+    // gwe jelasin prosesnya (ikhsan)
     // 1. Logika untuk Initial Load (Pertama kali buka chat)
     if (isInitialLoad.current && messages.length > 0 && container) {
       container.scrollTo({
@@ -66,7 +66,7 @@ const MessageList: FC<MessageListProps> = ({
   }, {} as Record<string, Message[]>);
   const processReadReceipts = () => {
     if (pendingReadIds.current.length === 0) return;
-
+    // gwe jelasin prosesnya (ikhsan)
     // Ambil semua ID yang sudah terkumpul
     const idsToUpdate = [...pendingReadIds.current];
     pendingReadIds.current = []; // Kosongkan antrian
@@ -82,6 +82,7 @@ const MessageList: FC<MessageListProps> = ({
   };
 
   const addToReadQueue = (id: string) => {
+    // gwe jelasin prosesnya (ikhsan)
     // Masukkan ID ke antrian jika belum ada
     if (!pendingReadIds.current.includes(id)) {
       pendingReadIds.current.push(id);

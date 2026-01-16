@@ -14,6 +14,8 @@ import { useEffect, useRef, useState } from "react";
 
 const supabase = createClient(); // Membuat instance supabase
 
+// jujur gua kadang nge blank kalo edit file ini aowkwkw
+
 const useChat = ({ userId }: { userId: string }) => {
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
   const [chats, setChats] = useState<Chat[]>();
