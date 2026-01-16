@@ -10,6 +10,8 @@ import { Dispatch, RefObject, SetStateAction } from "react";
 
 const supabase = createClient();
 
+// di file ini juga kadang nge blank gwe aowkwkw
+
 export const isUserReallyOnline = (
   lastSeenParam: string,
   isOnline: boolean

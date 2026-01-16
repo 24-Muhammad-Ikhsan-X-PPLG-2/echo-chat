@@ -36,21 +36,19 @@ const useChat = ({ userId }: { userId: string }) => {
       config: { presence: { key: userId } },
     });
 
-    // Fungsi pembantu untuk panggil API Next.js
+    // Intinya buat fetch ke api gweh
     const updateDatabaseStatus = (status: "online" | "offline") => {
       fetch("/api/presence", {
         method: "POST",
         body: JSON.stringify({ userId, status }),
         headers: { "Content-Type": "application/json" },
-        keepalive: true, // PENTING: Agar tetap jalan saat tab ditutup
+        keepalive: true, // PENTING: Agar bisa jalan pas ditutup tab nya
       });
     };
 
     channel
       .on("presence", { event: "sync" }, () => {
         const newState = channel.presenceState();
-        // Update local state jika kamu butuh daftar user online di UI
-        // setOnlineUsers(newState);
         console.log(newState);
       })
       .subscribe(async (status) => {
