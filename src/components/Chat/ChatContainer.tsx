@@ -14,6 +14,10 @@ interface ChatContainerProps {
   setMessages: Dispatch<SetStateAction<Message[]>>;
   userId: string;
   isInitialLoad: RefObject<boolean>;
+  selectedChatId: string;
+  isLoadingMessages: boolean;
+  hasMoreMessages: boolean;
+  loadMoreMessages: () => void;
 }
 
 const ChatContainer: FC<ChatContainerProps> = ({
@@ -24,6 +28,10 @@ const ChatContainer: FC<ChatContainerProps> = ({
   setMessages,
   userId,
   isInitialLoad,
+  selectedChatId,
+  isLoadingMessages,
+  hasMoreMessages,
+  loadMoreMessages,
 }) => {
   return (
     <div className="flex-1 flex flex-col h-screen bg-white dark:bg-gray-900">
@@ -32,6 +40,10 @@ const ChatContainer: FC<ChatContainerProps> = ({
 
       {/* Messages Area */}
       <MessageList
+        hasMore={hasMoreMessages}
+        loadMoreMessage={loadMoreMessages}
+        isLoading={isLoadingMessages}
+        selectedChatId={selectedChatId}
         isInitialLoad={isInitialLoad}
         userId={userId}
         messages={messages}

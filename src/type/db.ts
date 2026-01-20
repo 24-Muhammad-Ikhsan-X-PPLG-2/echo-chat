@@ -81,3 +81,12 @@ export type ProfilesDB = {
   last_seen: string;
   bio: string;
 };
+
+export type ChatParticipantsDB = {
+  chat_id: string;
+  user_id: string;
+  unread_count: number;
+  is_typing: boolean;
+  last_message_at: string;
+  last_read_at: string;
+};

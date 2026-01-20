@@ -22,6 +22,11 @@ const Chat: FC<ChatProps> = ({ user }) => {
     setSelectedChatId,
     setMessages,
     isInitialLoad,
+    refChat,
+    hasMoreChats,
+    isLoadingMessages,
+    hasMoreMessages,
+    loadMoreMessages,
   } = useChat({ userId });
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
@@ -29,6 +34,8 @@ const Chat: FC<ChatProps> = ({ user }) => {
     <div className="h-screen bg-gray-50 dark:bg-gray-950 flex">
       {/* Sidebar */}
       <ChatSidebar
+        hasMoreChats={hasMoreChats}
+        refChat={refChat}
         chats={chats}
         selectedChatId={selectedChatId}
         onSelectChat={(chatId) => {
@@ -43,6 +50,10 @@ const Chat: FC<ChatProps> = ({ user }) => {
       <div className="flex-1 flex flex-col">
         {selectedChat ? (
           <ChatContainer
+            hasMoreMessages={hasMoreMessages}
+            loadMoreMessages={loadMoreMessages}
+            isLoadingMessages={isLoadingMessages}
+            selectedChatId={selectedChatId ?? ""}
             isInitialLoad={isInitialLoad}
             setMessages={setMessages}
             userId={userId}

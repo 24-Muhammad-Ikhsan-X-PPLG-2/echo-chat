@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import NextTopLoader from "nextjs-toploader";
+import ReactQueryProvider from "@/providers/ReactQueryProvider";
 
 const InterFonts = Inter({
   variable: "--font-inter",
@@ -24,7 +25,7 @@ export default function RootLayout({
         className={`${InterFonts.variable} ${InterFonts.className} antialiased`}
       >
         <NextTopLoader color="#9810FA" />
-        {children}
+        <ReactQueryProvider>{children}</ReactQueryProvider>
       </body>
     </html>
   );

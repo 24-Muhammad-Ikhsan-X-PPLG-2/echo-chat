@@ -16,7 +16,7 @@ const ChatListItem: FC<ChatListItemProps> = ({ chat, isSelected, onClick }) => {
     <button
       onClick={onClick}
       className={`
-        w-full p-4 flex items-center gap-3 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors
+        w-full p-4 flex items-center gap-3 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors cursor-pointer
         ${
           isSelected
             ? "bg-purple-50 dark:bg-purple-900/20 border-l-4 border-purple-600"
@@ -25,8 +25,8 @@ const ChatListItem: FC<ChatListItemProps> = ({ chat, isSelected, onClick }) => {
       `}
     >
       {/* Avatar */}
-      <div className="relative flex-shrink-0">
-        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center text-white font-semibold shadow-md">
+      <div className="relative shrink-0">
+        <div className="w-12 h-12 rounded-full bg-linear-to-br from-purple-500 to-blue-500 flex items-center justify-center text-white font-semibold shadow-md">
           {chat.avatar}
         </div>
         {isUserReallyOnline(chat.lastSeen, chat.isOnline) && (
@@ -41,7 +41,7 @@ const ChatListItem: FC<ChatListItemProps> = ({ chat, isSelected, onClick }) => {
             {chat.name}
           </h3>
           {chat.timestamp && (
-            <span className="text-xs text-gray-500 dark:text-gray-400 flex-shrink-0 ml-2">
+            <span className="text-xs text-gray-500 dark:text-gray-400 shrink-0 ml-2">
               {formatDistanceToNow(chat.timestamp, { addSuffix: true })}
             </span>
           )}
@@ -57,7 +57,7 @@ const ChatListItem: FC<ChatListItemProps> = ({ chat, isSelected, onClick }) => {
             )}
           </p>
           {chat.unreadCount > 0 && (
-            <span className="flex-shrink-0 ml-2 min-w-[20px] h-5 px-1.5 bg-purple-600 text-white text-xs font-semibold rounded-full flex items-center justify-center">
+            <span className="shrink-0 ml-2 min-w-5 h-5 px-1.5 bg-purple-600 text-white text-xs font-semibold rounded-full flex items-center justify-center">
               {chat.unreadCount > 99 ? "99+" : chat.unreadCount}
             </span>
           )}

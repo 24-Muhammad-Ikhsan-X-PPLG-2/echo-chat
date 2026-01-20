@@ -3,7 +3,7 @@
 import { Message } from "@/type/db";
 import { formatDistanceToNow } from "date-fns";
 import { Check, CheckCheck } from "lucide-react";
-import { FC, useEffect, useRef } from "react";
+import { FC, useEffect, useRef, memo, useMemo } from "react";
 
 interface MessageBubbleProps {
   message: Message;
@@ -12,7 +12,7 @@ interface MessageBubbleProps {
   onRead: (msgId: string) => void;
 }
 
-const MessageBubble: FC<MessageBubbleProps> = ({
+const MessageBubbleComponent: FC<MessageBubbleProps> = ({
   message,
   showTimestamp = true,
   userId,
@@ -20,24 +20,42 @@ const MessageBubble: FC<MessageBubbleProps> = ({
 }) => {
   const isSent = message.isSent;
   const ref = useRef<HTMLDivElement>(null);
+
+  // OPTIMASI 1: Memoize format waktu agar tidak dihitung ulang setiap scroll
+  const timeAgo = useMemo(() => {
+    return formatDistanceToNow(new Date(message.timestamp), {
+      addSuffix: true,
+    });
+  }, [message.timestamp]);
+
+  // OPTIMASI 2: Intersection Observer lebih efisien
   useEffect(() => {
     if (message.sender_id !== userId && message.status !== "read") {
-      const observer = new IntersectionObserver(([entry]) => {
-        if (entry.isIntersecting) {
-          onRead(message.id);
-          observer.disconnect();
-        }
-      });
-      if (ref.current) observer.observe(ref.current);
+      const observer = new IntersectionObserver(
+        ([entry]) => {
+          if (entry.isIntersecting) {
+            onRead(message.id);
+            observer.disconnect();
+          }
+        },
+        { threshold: 0.1 },
+      ); // Menambah sedikit threshold biar lebih akurat
+
+      const currentRef = ref.current;
+      if (currentRef) observer.observe(currentRef);
+
       return () => {
         observer.disconnect();
       };
     }
-  }, [message.id, message.status]);
+  }, [message.id, message.status, userId, onRead]);
+
   return (
     <div
       ref={ref}
-      className={`flex ${isSent ? "justify-end" : "justify-start"} mb-2`}
+      key={message.id}
+      // OPTIMASI 3: Tambahkan transform-gpu dan contain:paint
+      className={`flex ${isSent ? "justify-end" : "justify-start"} mb-2 transform-gpu will-change-transform contain-[layout_paint]`}
     >
       <div
         className={`flex flex-col ${
@@ -64,9 +82,7 @@ const MessageBubble: FC<MessageBubbleProps> = ({
         {showTimestamp && (
           <div className="flex items-center gap-1 mt-1 px-1">
             <span className="text-xs text-gray-500 dark:text-gray-400">
-              {formatDistanceToNow(new Date(message.timestamp), {
-                addSuffix: true,
-              })}
+              {timeAgo}
             </span>
             {isSent && message.status && (
               <span className="text-gray-500 dark:text-gray-400">
@@ -85,5 +101,19 @@ const MessageBubble: FC<MessageBubbleProps> = ({
     </div>
   );
 };
+
+// OPTIMASI 4: Bungkus dengan memo untuk mencegah re-render list yang gak perlu
+const MessageBubble = memo(MessageBubbleComponent, (prev, next) => {
+  // Hanya render ulang jika ID, status, atau konten berubah
+  return (
+    prev.message.id === next.message.id &&
+    prev.message.status === next.message.status &&
+    prev.message.content === next.message.content &&
+    prev.showTimestamp === next.showTimestamp
+  );
+});
+
+// Memberikan nama eksplisit agar React DevTools gak bingung
+MessageBubble.displayName = "MessageBubble";
 
 export default MessageBubble;

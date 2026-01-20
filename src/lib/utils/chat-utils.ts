@@ -1,12 +1,25 @@
 "use client";
 
-import { Chat, ChatParticipantWithChat, Message, ProfilesDB } from "@/type/db";
 import {
+  Chat,
+  ChatDB,
+  ChatParticipantsDB,
+  ChatParticipantWithChat,
+  Message,
+  MessageDB,
+  ProfilesDB,
+} from "@/type/db";
+import {
+  PostgrestMaybeSingleResponse,
   PostgrestResponse,
   RealtimePostgresChangesPayload,
+  RealtimePostgresDeletePayload,
+  RealtimePostgresInsertPayload,
+  RealtimePostgresUpdatePayload,
 } from "@supabase/supabase-js";
 import { createClient } from "../supabase/client/client";
 import { Dispatch, RefObject, SetStateAction } from "react";
+import initDB from "../rxdb/init";
 
 const supabase = createClient();
 
@@ -14,7 +27,7 @@ const supabase = createClient();
 
 export const isUserReallyOnline = (
   lastSeenParam: string,
-  isOnline: boolean
+  isOnline: boolean,
 ) => {
   const twoMinutesAgo = new Date(Date.now() - 2 * 60 * 1000);
   const lastSeen = new Date(lastSeenParam);
@@ -25,7 +38,7 @@ export const isUserReallyOnline = (
 
 export const updateUserOnline = async (
   status: "online" | "offline",
-  userId: string
+  userId: string,
 ) => {
   const isOnline = status === "online" ? true : false;
   const { error } = await supabase
@@ -37,88 +50,112 @@ export const updateUserOnline = async (
   if (error) console.error(error);
 };
 
-export const fetchChats = async (
-  userId: string, // Mengambil user id dari pengguna
-  setChats: Dispatch<SetStateAction<Chat[] | undefined>> // ini untuk state chats
+export const updateDatabaseStatus = (
+  status: "online" | "offline",
+  userId: string,
 ) => {
-  // Ambil data dari table chat_participants dan memakai join untuk mengambil juga data dari table chats dan profiles
-  const { data, error } = (await supabase
+  fetch("/api/presence", {
+    method: "POST",
+    body: JSON.stringify({ userId, status }),
+    headers: { "Content-Type": "application/json" },
+    keepalive: true, // PENTING: Agar bisa jalan pas ditutup tab nya
+  });
+};
+
+// jujur kode ini digenerate gemini ai, bukan gua yg nulis, gua hanya menyesuaikan kode yg digenerate gemini ke kasus aplikasi gua.
+export const fetchChats = async (userId: string, page = 0, limit = 20) => {
+  const db = await initDB();
+  const skip = page * limit;
+
+  // 1. Ambil dari Local DB dulu (Pagination Lokal)
+  const chatsLocalDB = await db.chats
+    .find({
+      sort: [{ lastMessageAt: "desc" }],
+      limit: limit,
+      skip: skip,
+    })
+    .exec();
+
+  const localData = chatsLocalDB.map((chat) => chat.toJSON());
+
+  // 2. Ambil dari Supabase (Pagination API)
+  const { data, error, count } = (await supabase
     .from("chat_participants")
     .select(
       `
-        unread_count,
-    chats (
-      id,
-      is_group,
-      name,
-      last_message,
-      last_message_at,
-      chat_participants (
-        user_id,
-        profiles (
-          id,
-          username,
-          avatar_url,
-          is_online,
-          last_seen
+      unread_count,
+      chat_id,
+      chats (
+        id, is_group, name, last_message, last_message_at,
+        chat_participants!inner (
+          profiles ( id, username, avatar_url, is_online, last_seen )
         )
       )
+    `,
+      { count: "exact" },
     )
-      `
-    )
-    .eq("user_id", userId)) as PostgrestResponse<ChatParticipantWithChat>;
-  if (error) console.error(error);
-  if (!data) return;
-  // Set Chats untuk mengganti data dan trigger update ui react
-  setChats(
-    data.map((item) => {
-      const otherParticipant = item.chats?.chat_participants.find(
-        (item) => item.user_id !== userId
-      );
-      const nameChat = item.chats?.is_group
-        ? item.chats.name
-        : otherParticipant?.profiles?.username;
-      return {
-        id: item.chats?.id ?? "",
-        name: nameChat ?? "Unknown",
-        avatar: nameChat?.slice(0, 2) ?? "??",
-        lastMessage: item.chats?.last_message ?? "",
-        lastMessageAt: item.chats?.last_message_at ?? "",
-        timestamp: item.chats?.last_message_at ?? "",
-        unreadCount: item.unread_count,
-        isOnline: otherParticipant?.profiles?.is_online ?? false,
-        lastSeen: otherParticipant?.profiles?.last_seen ?? "",
-        otherParticipantId: otherParticipant?.profiles?.id ?? "",
-      };
-    })
-  );
+    .eq("user_id", userId)
+    .neq("chats.chat_participants.user_id", userId)
+    .order("chats(last_message_at)", { ascending: false }) // Pastikan urutan sama
+    .range(
+      skip,
+      skip + limit - 1,
+    )) as PostgrestResponse<ChatParticipantWithChat>;
+
+  if (error || !data)
+    return {
+      data: localData,
+      count: 0,
+    };
+
+  const formattedChats = data.map((item) => {
+    const chat = item.chats;
+    // Karena kita sudah filter .neq user_id di atas, index 0 pasti lawan bicara
+    const otherParticipant = chat?.chat_participants?.[0]?.profiles;
+
+    const nameChat = chat?.is_group ? chat.name : otherParticipant?.username;
+
+    return {
+      id: chat?.id ?? "",
+      name: nameChat ?? "Unknown",
+      avatar: nameChat?.slice(0, 2) ?? "??",
+      lastMessage: chat?.last_message ?? "",
+      lastMessageAt: chat?.last_message_at ?? "",
+      timestamp: chat?.last_message_at ?? "",
+      unreadCount: item.unread_count,
+      isOnline: otherParticipant?.is_online ?? false,
+      lastSeen: otherParticipant?.last_seen ?? "",
+      otherParticipantId: otherParticipant?.id ?? "",
+    };
+  });
+
+  // 4. Sinkronisasi ke Local DB (Upsert agar data lama terupdate)
+  // Gunakan bulkUpsert agar jika ada perubahan lastMessage, data lokal terupdate
+  const supabaseIds = new Set(formattedChats.map((c) => c.id));
+  const localChats = await db.chats.find().exec();
+  const idsToRemove = localChats
+    .map((doc) => doc.id)
+    .find((id) => !supabaseIds.has(id));
+  if (idsToRemove && idsToRemove.length > 0) {
+    db.chats.bulkRemove([idsToRemove]);
+  }
+  db.chats.bulkUpsert(formattedChats);
+  return {
+    data: formattedChats,
+    totalCount: count || 0,
+    hasMore: skip + limit < (count || 0),
+  };
 };
 
 export const subscribeProfiles = (
-  setChats: Dispatch<SetStateAction<Chat[] | undefined>>
+  onPayload: (payload: RealtimePostgresUpdatePayload<ProfilesDB>) => void,
 ) => {
   const channelProfiles = supabase
     .channel("profiles-channel")
     .on(
       "postgres_changes",
-      { event: "*", schema: "public", table: "profiles" },
-      (payload: RealtimePostgresChangesPayload<ProfilesDB>) => {
-        if (payload.eventType === "UPDATE") {
-          const profile = payload.new;
-          setChats((prev) =>
-            prev?.map((chat) => {
-              if (chat.otherParticipantId == profile.id) {
-                return {
-                  ...chat,
-                  isOnline: profile.is_online,
-                  lastSeen: profile.last_seen,
-                };
-              }
-              return chat;
-            })
-          );
-        }
-      }
+      { event: "UPDATE", schema: "public", table: "profiles" },
+      onPayload,
     )
     .subscribe();
   return channelProfiles;
@@ -127,63 +164,52 @@ export const subscribeProfiles = (
 export const fetchMessages = async (
   chatId: string,
   userId: string,
-  setMessages: Dispatch<SetStateAction<Message[]>>,
-  chats: Chat[] | undefined,
-  setChats: Dispatch<SetStateAction<Chat[] | undefined>>
+  page = 0,
+  limit = 25,
 ) => {
-  await supabase
+  const skip = page * limit;
+  const { data, count } = (await supabase
+    .from("messages")
+    .select("*", { count: "exact" })
+    .eq("chat_id", chatId)
+    .order("created_at", { ascending: false })
+    .range(skip, skip + limit - 1)) as PostgrestResponse<MessageDB>;
+  if (!data) return;
+
+  const newMessages = data
+    .map((msg) => ({
+      id: msg.id,
+      chatId: msg.chat_id,
+      content: msg.content,
+      timestamp: msg.created_at,
+      isSent: msg.sender_id === userId,
+      sender_id: msg.sender_id,
+      status: msg.status,
+      type: msg.type,
+      fileUrl: msg.file_url,
+      fileName: msg.file_name,
+      is_deleted: msg.is_deleted,
+      created_at: msg.created_at,
+    }))
+    .reverse();
+  const updatedChatIds = new Set(data.map((item) => item.chat_id));
+  supabase
     .from("chat_participants")
     .update({
       unread_count: 0,
     })
     .eq("chat_id", chatId)
     .eq("user_id", userId);
-  const { data } = await supabase
-    .from("messages")
-    .select("*")
-    .eq("chat_id", chatId)
-    .order("created_at");
-
-  if (!data) return;
-
-  setMessages(
-    data.map((msg) => {
-      const dataChats = [...(chats ?? [])];
-      const editChats = dataChats.map((item) => {
-        if (item.id === msg.chat_id) {
-          return {
-            ...item,
-            unreadCount: 0,
-          };
-        }
-        return item;
-      });
-      setChats(editChats);
-      return {
-        id: msg.id,
-        chatId: msg.chat_id,
-        content: msg.content,
-        timestamp: msg.created_at,
-        isSent: msg.sender_id === userId,
-        sender_id: msg.sender_id,
-        status: msg.status,
-        type: msg.type,
-        fileUrl: msg.file_url,
-        fileName: msg.file_name,
-        is_deleted: msg.is_deleted,
-        created_at: msg.created_at,
-      };
-    })
-  );
+  return {
+    newMessages,
+    updatedChatIds,
+    hasMoreMessages: skip + limit < (count || 0),
+  };
 };
 
 export const subscribeMessages = (
   chatId: string,
-  userId: string,
-  setMessages: Dispatch<SetStateAction<Message[]>>,
-  chats: Chat[] | undefined,
-  setChats: Dispatch<SetStateAction<Chat[] | undefined>>,
-  messagesRef: RefObject<Message[]>
+  onPayload: (payload: RealtimePostgresChangesPayload<MessageDB>) => void,
 ) => {
   const messageChannel = supabase
     .channel(`chat-${chatId}`)
@@ -195,72 +221,7 @@ export const subscribeMessages = (
         table: "messages",
         filter: `chat_id=eq.${chatId}`,
       },
-      async (payload) => {
-        if (payload.eventType === "INSERT") {
-          const msg = payload.new;
-          if (msg.sender_id === userId) return;
-          setMessages((prev) => [
-            ...prev,
-            {
-              id: msg.id,
-              chatId: msg.chat_id,
-              content: msg.content,
-              timestamp: msg.created_at,
-              isSent: msg.sender_id === userId,
-              sender_id: msg.sender_id,
-              status: msg.status,
-              type: msg.type,
-              fileUrl: msg.file_url,
-              fileName: msg.file_name,
-              is_deleted: msg.is_deleted,
-              created_at: msg.created_at,
-            },
-          ]);
-          const dataChats = [...(chats ?? [])];
-          const editChats = dataChats.map((item) => {
-            if (item.id === msg.chat_id) {
-              return {
-                ...item,
-                lastMessage: msg.content,
-                timestamp: msg.created_at,
-                unreadCount: 0,
-              };
-            }
-            return item;
-          });
-          setChats(editChats);
-          await supabase
-            .from("chat_participants")
-            .update({
-              unread_count: 0,
-            })
-            .eq("chat_id", chatId)
-            .eq("user_id", userId);
-        }
-        if (payload.eventType === "UPDATE" && messagesRef.current) {
-          const msg = payload.new;
-          const findIndex = messagesRef.current.findIndex(
-            (item) => item.id == msg.id
-          );
-          if (findIndex === -1) return;
-          const newMsg = [...messagesRef.current];
-          newMsg[findIndex] = {
-            id: msg.id,
-            chatId: msg.chat_id,
-            content: msg.content,
-            timestamp: msg.created_at,
-            isSent: msg.sender_id === userId,
-            sender_id: msg.sender_id,
-            status: msg.status,
-            type: msg.type,
-            fileUrl: msg.file_url,
-            fileName: msg.file_name,
-            is_deleted: msg.is_deleted,
-            created_at: msg.created_at,
-          };
-          setMessages(newMsg);
-        }
-      }
+      onPayload,
     )
     .subscribe();
   return messageChannel;
@@ -268,10 +229,17 @@ export const subscribeMessages = (
 
 export const sidebarSubscribeChannel = (
   userId: string,
-  setChats: Dispatch<SetStateAction<Chat[] | undefined>>,
-  selectedChatIdRef: RefObject<string | null>
+  onPayloadSidebarMessages: (
+    payload: RealtimePostgresInsertPayload<MessageDB>,
+  ) => void,
+  onPayloadSidebarChats: (
+    payload: RealtimePostgresDeletePayload<ChatDB>,
+  ) => void,
+  onPayloadSidebarChatParticipant: (
+    payload: RealtimePostgresChangesPayload<ChatParticipantsDB>,
+  ) => void,
 ) => {
-  const sidebarChannel = supabase
+  const sidebarMessagesChannel = supabase
     .channel("sidebar-messages")
     .on(
       "postgres_changes",
@@ -280,31 +248,37 @@ export const sidebarSubscribeChannel = (
         schema: "public",
         table: "messages",
       },
-      (payload) => {
-        const message = payload.new;
-        setChats((prev) =>
-          prev?.map((chat) => {
-            const unreadWhenNotSelectedChat =
-              message.sender_id !== userId
-                ? chat.unreadCount + 1
-                : chat.unreadCount;
-            const unread =
-              selectedChatIdRef.current == chat.id
-                ? 0
-                : unreadWhenNotSelectedChat;
-            if (chat.id === message.chat_id) {
-              return {
-                ...chat,
-                lastMessage: message.content,
-                timestamp: message.created_at,
-                unreadCount: unread,
-              };
-            }
-            return chat;
-          })
-        );
-      }
+      onPayloadSidebarMessages,
     )
     .subscribe();
-  return sidebarChannel;
+  const sidebarChatsChannel = supabase
+    .channel("sidebar-chats")
+    .on(
+      "postgres_changes",
+      {
+        event: "DELETE",
+        schema: "public",
+        table: "chats",
+      },
+      onPayloadSidebarChats,
+    )
+    .subscribe();
+  const sidebarChatParticipantsChannel = supabase
+    .channel("sidebar-chat-participants")
+    .on(
+      "postgres_changes",
+      {
+        event: "*",
+        schema: "public",
+        table: "chat_participants",
+        filter: `user_id=eq.${userId}`,
+      },
+      onPayloadSidebarChatParticipant,
+    )
+    .subscribe();
+  return {
+    sidebarMessagesChannel,
+    sidebarChatsChannel,
+    sidebarChatParticipantsChannel,
+  };
 };

@@ -2,15 +2,24 @@
 
 import { createClient } from "@/lib/supabase/client/client";
 import {
+  handlePayloadMessages,
+  handlePayloadProfiles,
+  handlePayloadSidebarChatParticipants,
+  handlePayloadSidebarChats,
+  handlePayloadSidebarMessages,
+} from "@/lib/utils/chat-payload";
+import {
   fetchChats,
   fetchMessages,
   sidebarSubscribeChannel,
   subscribeMessages,
   subscribeProfiles,
+  updateDatabaseStatus,
   updateUserOnline,
 } from "@/lib/utils/chat-utils";
 import { Chat, Message } from "@/type/db";
 import { useEffect, useRef, useState } from "react";
+import { useInView } from "react-intersection-observer";
 
 const supabase = createClient(); // Membuat instance supabase
 
@@ -20,31 +29,66 @@ const useChat = ({ userId }: { userId: string }) => {
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
   const [chats, setChats] = useState<Chat[]>();
   const [messages, setMessages] = useState<Message[]>([]);
+  const [pageChats, setPageChats] = useState(0);
+  const [hasMoreChats, setHasMoreChats] = useState(true);
+  const [pageMessages, setPageMessages] = useState(0);
+  const [hasMoreMessages, setHasMoreMessages] = useState(true);
+  const [isLoadingMessages, setIsLoadingMessages] = useState(false);
+
   const messagesRef = useRef<Message[]>([]);
   const selectedChatIdRef = useRef<string | null>(null);
   const isInitialLoad = useRef(true);
+  const { ref: refChat, inView: inViewChat } = useInView();
+  const loadChats = async (currentPage: number) => {
+    const res = await fetchChats(userId, 0);
+    setChats((prev) => {
+      const newItem = res.data;
+      if (currentPage === 0 || !prev) return newItem;
+      const combined = [...prev, ...newItem];
+      return combined.filter(
+        (v, i, a) => a.findIndex((t) => t.id === v.id) === i,
+      );
+    });
+    setHasMoreChats(res.hasMore ?? false);
+  };
+  const loadMoreMessages = async (isInit = false) => {
+    if (isLoadingMessages || (!hasMoreMessages && !isInit) || !selectedChatId)
+      return;
+    setIsLoadingMessages(true);
+    try {
+      const nextPage = isInit ? 0 : pageMessages;
+      const res = await fetchMessages(selectedChatId, userId, nextPage);
+      setMessages((prev) => {
+        if (!prev || !res) return prev;
+        return isInit ? res?.newMessages : [...res?.newMessages, ...prev];
+      });
+      setHasMoreMessages(res?.hasMoreMessages ?? false);
+      setPageMessages((prev) => prev + 1);
+      return {
+        updatedChatIds: res?.updatedChatIds ?? null,
+      };
+    } finally {
+      setIsLoadingMessages(false);
+    }
+  };
   // Pertama kali load pesan pengguna.
+
   useEffect(() => {
-    (async () => {
-      await fetchChats(userId, setChats);
-    })();
+    loadChats(0);
   }, []);
+  useEffect(() => {
+    if (inViewChat && hasMoreChats) {
+      const nextPage = pageChats + 1;
+      setPageChats(nextPage);
+      loadChats(nextPage);
+    }
+  }, [inViewChat, hasMoreChats]);
   useEffect(() => {
     if (!userId) return;
 
     const channel = supabase.channel("room_online", {
       config: { presence: { key: userId } },
     });
-
-    // Intinya buat fetch ke api gweh
-    const updateDatabaseStatus = (status: "online" | "offline") => {
-      fetch("/api/presence", {
-        method: "POST",
-        body: JSON.stringify({ userId, status }),
-        headers: { "Content-Type": "application/json" },
-        keepalive: true, // PENTING: Agar bisa jalan pas ditutup tab nya
-      });
-    };
 
     channel
       .on("presence", { event: "sync" }, () => {
@@ -54,7 +98,7 @@ const useChat = ({ userId }: { userId: string }) => {
       .subscribe(async (status) => {
         if (status === "SUBSCRIBED") {
           // 1. Update Database lewat API Next.js
-          updateDatabaseStatus("online");
+          updateDatabaseStatus("online", userId);
 
           // 2. Kirim sinyal Presence ke user lain
           await channel.track({
@@ -66,16 +110,16 @@ const useChat = ({ userId }: { userId: string }) => {
 
     // Event listener untuk menutup tab/browser
     const handleBeforeUnload = () => {
-      updateDatabaseStatus("offline");
+      updateDatabaseStatus("offline", userId);
     };
 
     window.addEventListener("beforeunload", handleBeforeUnload);
     const heartBeatInterval = setInterval(() => {
-      updateDatabaseStatus("online");
+      updateDatabaseStatus("online", userId);
     }, 60000);
     return () => {
       // Cleanup saat komponen unmount
-      updateDatabaseStatus("offline");
+      updateDatabaseStatus("offline", userId);
       window.removeEventListener("beforeunload", handleBeforeUnload);
       channel.unsubscribe();
       clearInterval(heartBeatInterval);
@@ -89,17 +133,33 @@ const useChat = ({ userId }: { userId: string }) => {
     selectedChatIdRef.current = selectedChatId;
   }, [selectedChatId]);
   // Menangani ambil pesan dari lawan bicara yg dipilih dan listen ke realtime messages
+  const loadMessages = async () => {
+    if (!selectedChatId) return;
+    setPageMessages(0);
+    setHasMoreMessages(true);
+    setIsLoadingMessages(false);
+    const res = await loadMoreMessages(true);
+    setChats((prev) => {
+      if (!prev) return prev;
+      return prev.map((chat) => {
+        if (res?.updatedChatIds!.has(chat.id)) {
+          return {
+            ...chat,
+            unreadCount: 0,
+          };
+        }
+        return chat;
+      });
+    });
+  };
   useEffect(() => {
     if (!selectedChatId) return;
+    setMessages([]);
+
     isInitialLoad.current = true;
-    fetchMessages(selectedChatId, userId, setMessages, chats, setChats);
-    const messageChannel = subscribeMessages(
-      selectedChatId,
-      userId,
-      setMessages,
-      chats,
-      setChats,
-      messagesRef
+    loadMessages();
+    const messageChannel = subscribeMessages(selectedChatId, (p) =>
+      handlePayloadMessages(p, setMessages, userId, selectedChatId),
     );
     return () => {
       supabase.removeChannel(messageChannel);
@@ -107,15 +167,26 @@ const useChat = ({ userId }: { userId: string }) => {
   }, [selectedChatId]);
   // Listen ke realtime messages untuk update sidebar
   useEffect(() => {
-    const sidebarChannel = sidebarSubscribeChannel(
+    // P disini adalah payload maksudnya
+    const {
+      sidebarMessagesChannel,
+      sidebarChatsChannel,
+      sidebarChatParticipantsChannel,
+    } = sidebarSubscribeChannel(
       userId,
-      setChats,
-      selectedChatIdRef
+      (p) =>
+        handlePayloadSidebarMessages(p, setChats, selectedChatIdRef, userId),
+      (p) => handlePayloadSidebarChats(p, setChats),
+      (p) => handlePayloadSidebarChatParticipants(p, setChats, userId),
     );
-    const subscribeProfilesChannel = subscribeProfiles(setChats);
+    const subscribeProfilesChannel = subscribeProfiles((p) =>
+      handlePayloadProfiles(p, setChats),
+    );
     return () => {
-      supabase.removeChannel(sidebarChannel);
+      supabase.removeChannel(sidebarMessagesChannel);
       supabase.removeChannel(subscribeProfilesChannel);
+      supabase.removeChannel(sidebarChatsChannel);
+      supabase.removeChannel(sidebarChatParticipantsChannel);
     };
   }, []);
   // Untuk menentukan chat mana yg dipilih
@@ -128,6 +199,12 @@ const useChat = ({ userId }: { userId: string }) => {
     messages,
     setMessages,
     isInitialLoad,
+    loadChats,
+    refChat,
+    hasMoreChats,
+    isLoadingMessages,
+    loadMoreMessages,
+    hasMoreMessages,
   };
 };
 

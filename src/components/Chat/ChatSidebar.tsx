@@ -4,6 +4,7 @@ import { Chat } from "@/type/db";
 import { Search, X } from "lucide-react";
 import { FC, useState } from "react";
 import ChatListItem from "./ChatListItem";
+import { useInView } from "react-intersection-observer";
 
 interface ChatSidebarProps {
   chats: Chat[] | undefined;
@@ -11,6 +12,8 @@ interface ChatSidebarProps {
   onSelectChat: (chatId: string) => void;
   isOpen: boolean;
   onClose: () => void;
+  refChat: (node?: Element | null | undefined) => void;
+  hasMoreChats: boolean;
 }
 
 const ChatSidebar: FC<ChatSidebarProps> = ({
@@ -19,11 +22,13 @@ const ChatSidebar: FC<ChatSidebarProps> = ({
   onClose,
   onSelectChat,
   selectedChatId,
+  refChat,
+  hasMoreChats,
 }) => {
   const [searchQuery, setSearchQuery] = useState("");
 
   const filteredChats = chats?.filter((chat) =>
-    chat.name.toLowerCase().includes(searchQuery.toLowerCase())
+    chat.name.toLowerCase().includes(searchQuery.toLowerCase()),
   );
   return (
     <>
@@ -91,6 +96,11 @@ const ChatSidebar: FC<ChatSidebarProps> = ({
               ))}
             </div>
           )}
+          <div ref={refChat} className="p-8 text-center">
+            <p className="text-gray-500 dark:text-gray-400">
+              {hasMoreChats ? "Loading more..." : "No more chats"}
+            </p>
+          </div>
         </div>
       </div>
     </>
