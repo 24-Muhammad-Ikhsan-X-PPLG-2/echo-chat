@@ -1,15 +1,23 @@
 import EmailField from '@/features/login/components/EmailField';
 import PasswordField from '@/features/login/components/PasswordField';
 import { MessageCircle } from 'lucide-react';
-import { Link } from '@inertiajs/react';
+import { Link, usePage } from '@inertiajs/react';
 import Google from '@/icons/Google';
 import useLogin from '@/features/login/hooks/useLogin';
 
 const SignIn = () => {
+    const {
+        flash: { success },
+    } = usePage().props;
     const { errors, handleSignIn, handleSubmit, isLoading, register } =
         useLogin();
     return (
-        <div className="flex min-h-screen items-center justify-center bg-white px-4 font-['Space_Grotesk']">
+        <div className="flex min-h-screen flex-col items-center justify-center bg-white px-4 font-['Space_Grotesk']">
+            {success && (
+                <div className="mb-5 w-full border-2 border-green-600 bg-green-300 py-2 lg:w-1/2">
+                    <p className="text-center text-green-900">{success}</p>
+                </div>
+            )}
             <div className="h-fit min-h-100 w-full border-[3px] p-5 shadow-[5px_5px_0px_#000] lg:w-1/2">
                 <div className="group mx-auto flex w-fit items-center justify-center gap-2">
                     <div className="flex h-8 w-8 items-center justify-center border-2 border-black bg-black transition-all group-hover:shadow-[3px_3px_0px_#000]">
