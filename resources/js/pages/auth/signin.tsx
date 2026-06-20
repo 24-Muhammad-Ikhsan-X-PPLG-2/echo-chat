@@ -27,6 +27,7 @@ const SignIn = () => {
                         {...register('email')}
                     />
                     <PasswordField
+                        id="password"
                         disabled={isLoading}
                         error={errors.password}
                         {...register('password')}

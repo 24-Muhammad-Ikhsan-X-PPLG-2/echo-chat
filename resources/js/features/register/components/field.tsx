@@ -1,0 +1,29 @@
+import { FC, InputHTMLAttributes, Ref } from 'react';
+import { FieldError } from 'react-hook-form';
+
+type Props = InputHTMLAttributes<HTMLInputElement> & {
+    ref?: Ref<HTMLInputElement>;
+    error?: FieldError;
+    label: string;
+};
+
+const Field: FC<Props> = ({ ref, error, label, ...props }) => {
+    return (
+        <div className="flex w-full flex-col">
+            <label
+                htmlFor={props.id}
+                className={`font-medium ${error && 'text-red-600'}`}
+            >
+                {label}
+            </label>
+            <input
+                className={`w-full border-2 px-2 py-2 transition-all outline-none ${error ? 'border-red-600 focus:shadow-[5px_5px_0px_#e7000b]' : 'focus:shadow-[5px_5px_0px_#000]'}`}
+                ref={ref}
+                {...props}
+            />
+            {error && <p className="mt-1 text-red-600">{error.message}</p>}
+        </div>
+    );
+};
+
+export default Field;

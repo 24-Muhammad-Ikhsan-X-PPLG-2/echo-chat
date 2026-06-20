@@ -33,8 +33,8 @@ const useLogin = () => {
             },
             {
                 onBefore: () => setIsLoading(true),
-                onError: (error) => {
-                    Object.entries(error).map(([field, message]) => {
+                onError: (errors) => {
+                    Object.entries(errors).map(([field, message]) => {
                         setError(field as keyof LoginSchemeType, {
                             message,
                         });
