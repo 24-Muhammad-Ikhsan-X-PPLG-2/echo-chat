@@ -1,3 +1,4 @@
+import { Link, usePage } from '@inertiajs/react';
 import { Menu, MessageCircle, X } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { useState } from 'react';
@@ -34,12 +35,12 @@ const Navbar = () => {
 
                 {/* CTA */}
                 <div className="hidden items-center gap-3 md:flex">
-                    <a
-                        href="#"
+                    <Link
+                        href="/auth/signin"
                         className="text-sm font-bold underline-offset-2 hover:underline"
                     >
                         Sign In
-                    </a>
+                    </Link>
                     <button className="border-[3px] border-black bg-black px-5 py-2 text-sm font-black text-white transition-all hover:bg-white hover:text-black hover:shadow-[4px_4px_0px_#000]">
                         Start Chatting
                     </button>
