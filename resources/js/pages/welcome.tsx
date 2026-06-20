@@ -9,7 +9,6 @@ import FAQSection from '@/features/landing/sections/FAQSection';
 import CTASection from '@/features/landing/sections/CTASection';
 import Footer from '@/features/landing/sections/Footer';
 
-/* ─── Main App ─── */
 export default function App() {
     return (
         <div className="overflow-x-hidden bg-white font-['Space_Grotesk'] text-black">
