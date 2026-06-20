@@ -2,14 +2,16 @@ import { FC } from 'react';
 
 type Props = {
     size?: number;
+    className?: string;
 };
 
-const Twitter: FC<Props> = ({ size }) => {
+const Twitter: FC<Props> = ({ size, className }) => {
     return (
         <svg
             role="img"
             width={size}
             height={size}
+            className={className}
             viewBox="0 0 24 24"
             xmlns="http://www.w3.org/2000/svg"
         >

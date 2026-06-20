@@ -2,15 +2,17 @@ import { FC } from 'react';
 
 type Props = {
     size?: number;
+    className?: string;
 };
 
-const Linkedin: FC<Props> = ({ size }) => {
+const Linkedin: FC<Props> = ({ size, className }) => {
     return (
         <svg
             width={size}
             height={size}
             viewBox="0 0 20 20"
             version="1.1"
+            className={className}
             xmlns="http://www.w3.org/2000/svg"
             xmlnsXlink="http://www.w3.org/1999/xlink"
         >
@@ -27,7 +29,7 @@ const Linkedin: FC<Props> = ({ size }) => {
                 <g
                     id="Dribbble-Light-Preview"
                     transform="translate(-180.000000, -7479.000000)"
-                    fill="#000000"
+                    className={className}
                 >
                     <g id="icons" transform="translate(56.000000, 160.000000)">
                         <path
