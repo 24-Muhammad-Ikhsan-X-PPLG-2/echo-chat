@@ -32,6 +32,7 @@
         "typescript-eslint": "^8.23.0"
     },
     "dependencies": {
+        "@hookform/resolvers": "^5.4.0",
         "@inertiajs/react": "^3.0.0",
         "@inertiajs/vite": "^3.0.0",
         "@tailwindcss/vite": "^4.1.11",
@@ -47,6 +48,7 @@
         "motion": "^12.40.0",
         "react": "^19.2.0",
         "react-dom": "^19.2.0",
+        "react-hook-form": "^7.80.0",
         "tailwind-merge": "^3.0.1",
         "tailwindcss": "^4.0.0",
         "typescript": "^5.7.2",

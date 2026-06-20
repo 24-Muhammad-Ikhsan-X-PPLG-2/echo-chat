@@ -21,18 +21,12 @@ class AuthController extends Controller
         ]);
         $rememberMe = $req->boolean('remember');
         if (!Auth::attempt($cred, $rememberMe)) {
-            return response()->json([
-                'success' => false,
-                'field' => [
-                    'email' => 'Email or password invalid.',
-                    'password' => 'Email or password invalid.'
-                ]
+            return redirect('/auth/signin')->withErrors([
+                'email' => "Email or password invalid.",
+                'password' => "Email or password invalid.",
             ]);
         }
         $req->session()->regenerate();
-        return response()->json([
-            'success' => true,
-            'field' => null
-        ]);
+        return redirect('/');
     }
 }
