@@ -40,7 +40,7 @@ const Signup = () => {
                 full_name: fullName,
                 email,
                 password,
-                confirmation_password: confirmPassword,
+                password_confirmation: confirmPassword,
             },
             {
                 onBefore: () => setIsLoading(true),

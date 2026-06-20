@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\LoginRequest;
+use App\Http\Requests\RegisterRequest;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -34,7 +35,7 @@ class AuthController extends Controller
     {
         return Inertia::render('auth/signup');
     }
-    public function registerP(LoginRequest $req)
+    public function registerP(RegisterRequest $req)
     {
         User::query()->create($req->validated());
         return redirect('/auth/signin')->with('success', 'Account created successfully. Please sign in to continue.');
