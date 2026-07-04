@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\LoginRequest;
 use App\Http\Requests\RegisterRequest;
+use App\Models\PrivateKey;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -29,7 +30,7 @@ class AuthController extends Controller
             ]);
         }
         $req->session()->regenerate();
-        return redirect()->intended('/');
+        return back();
     }
     public function register()
     {
@@ -37,7 +38,22 @@ class AuthController extends Controller
     }
     public function registerP(RegisterRequest $req)
     {
-        User::query()->create($req->validated());
+        $user = User::query()->create($req->safe()->only([
+            'email',
+            'password',
+            'username',
+            'full_name',
+            'public_key',
+        ]));
+        // PrivateKey::query()->create([
+        //     ...$req->safe()->only([
+        //         'key',
+        //         'iv',
+        //         'salt'
+        //     ]),
+        //     'user_id' => $user->id,
+        // ]);
+        PrivateKeyController::store($req->string('key'), $req->string('iv'), $req->string('salt'), $user->id);
         return redirect('/auth/signin')->with('success', 'Account created successfully. Please sign in to continue.');
     }
 }

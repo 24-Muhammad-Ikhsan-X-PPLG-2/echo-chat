@@ -1,6 +1,7 @@
 import { Eye, EyeOff } from 'lucide-react';
-import { FC, InputHTMLAttributes, Ref, useState } from 'react';
-import { FieldError } from 'react-hook-form';
+import type { FC, InputHTMLAttributes, Ref} from 'react';
+import { useState } from 'react';
+import type { FieldError } from 'react-hook-form';
 
 type Props = InputHTMLAttributes<HTMLInputElement> & {
     error?: FieldError;
@@ -17,6 +18,7 @@ const PasswordField: FC<Props> = ({
     const [passwordFocus, setPasswordFocus] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
     const handleToggleShowPassword = () => setShowPassword((prev) => !prev);
+
     return (
         <div className="flex w-full flex-col">
             <label

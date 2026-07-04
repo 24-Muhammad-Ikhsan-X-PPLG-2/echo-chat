@@ -1,10 +1,11 @@
-import { useState } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
 import { ChevronDown } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
+import { useState } from 'react';
 
 /* ─── Dark FAQ Item (for FAQ section on black bg) ─── */
 export default function FAQItemDark({ q, a }: { q: string; a: string }) {
     const [open, setOpen] = useState(false);
+
     return (
         <>
             <button

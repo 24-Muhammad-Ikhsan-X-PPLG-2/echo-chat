@@ -1,6 +1,6 @@
 import { ArrowRight, Play } from 'lucide-react';
-import FadeIn from '../components/FadeIn';
 import ChatMockup from '../components/ChatMockup';
+import FadeIn from '../components/FadeIn';
 
 const HeroSection = () => {
     return (

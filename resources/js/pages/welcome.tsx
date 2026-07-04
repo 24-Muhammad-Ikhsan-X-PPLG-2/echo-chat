@@ -1,13 +1,13 @@
 import Navbar from '@/features/landing/components/Navbar';
-import HeroSection from '@/features/landing/sections/HeroSection';
-import StatsSection from '@/features/landing/sections/StatsSection';
-import FeaturesSection from '@/features/landing/sections/FeaturesSection';
-import ProductShowcaseSection from '@/features/landing/sections/ProductShowcaseSection';
-import WhyEchochat from '@/features/landing/sections/WhyEchochat';
-import TestimonialsSection from '@/features/landing/sections/TestimonialsSection';
-import FAQSection from '@/features/landing/sections/FAQSection';
 import CTASection from '@/features/landing/sections/CTASection';
+import FAQSection from '@/features/landing/sections/FAQSection';
+import FeaturesSection from '@/features/landing/sections/FeaturesSection';
 import Footer from '@/features/landing/sections/Footer';
+import HeroSection from '@/features/landing/sections/HeroSection';
+import ProductShowcaseSection from '@/features/landing/sections/ProductShowcaseSection';
+import StatsSection from '@/features/landing/sections/StatsSection';
+import TestimonialsSection from '@/features/landing/sections/TestimonialsSection';
+import WhyEchochat from '@/features/landing/sections/WhyEchochat';
 
 export default function App() {
     return (

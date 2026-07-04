@@ -1,5 +1,5 @@
-import { FC, InputHTMLAttributes, Ref } from 'react';
-import { FieldError } from 'react-hook-form';
+import type { FC, InputHTMLAttributes, Ref } from 'react';
+import type { FieldError } from 'react-hook-form';
 
 type Props = InputHTMLAttributes<HTMLInputElement> & {
     ref?: Ref<HTMLInputElement>;

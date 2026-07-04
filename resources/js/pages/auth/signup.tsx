@@ -1,13 +1,19 @@
-import EmailField from '@/features/login/components/EmailField';
-import PasswordField from '@/features/login/components/PasswordField';
-import Field from '@/features/register/components/field';
-import { registerScheme, RegisterSchemeType } from '@/features/register/scheme';
-import Google from '@/icons/Google';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Link, router } from '@inertiajs/react';
 import { MessageCircle } from 'lucide-react';
 import { useState } from 'react';
-import { SubmitHandler, useForm } from 'react-hook-form';
+import type { SubmitHandler } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
+
+import { E2EE } from '@/features/chat/e2ee';
+import EmailField from '@/features/login/components/EmailField';
+import PasswordField from '@/features/login/components/PasswordField';
+import Field from '@/features/register/components/field';
+import type { RegisterSchemeType } from '@/features/register/scheme';
+import { registerScheme } from '@/features/register/scheme';
+import Google from '@/icons/Google';
+import { cryptoMan } from '@/lib/crypto-man';
+import { KeyStorage } from '@/lib/key-storage';
 
 const Signup = () => {
     const [isLoading, setIsLoading] = useState(false);
@@ -26,13 +32,19 @@ const Signup = () => {
             password: '',
         },
     });
-    const handleSignUp: SubmitHandler<RegisterSchemeType> = ({
+    const handleSignUp: SubmitHandler<RegisterSchemeType> = async ({
         confirmPassword,
         email,
         fullName,
         password,
         username,
     }) => {
+        const keyPair = await E2EE.generateKeyPair();
+        const publicKey = await E2EE.exportPublicKey(keyPair.publicKey);
+        const encrypted = await cryptoMan.encrypt(
+            await E2EE.exportPrivateKey(keyPair.privateKey),
+            password,
+        );
         router.post(
             '/auth/signup',
             {
@@ -41,22 +53,29 @@ const Signup = () => {
                 email,
                 password,
                 password_confirmation: confirmPassword,
+                public_key: publicKey,
+                key: encrypted.ciphertext,
+                iv: encrypted.iv,
+                salt: encrypted.salt,
             },
             {
                 onBefore: () => setIsLoading(true),
                 onError: (errors) => {
-                    Object.entries(errors).map(([field, message]) => {
+                    for (const [field, message] of Object.entries(errors)) {
                         setError(field as keyof RegisterSchemeType, {
                             message,
                         });
-                    });
+                    }
                 },
                 onFinish: () => setIsLoading(false),
+                onSuccess: async () =>
+                    await KeyStorage.save(keyPair.privateKey),
                 preserveScroll: true,
                 preserveState: true,
             },
         );
     };
+
     return (
         <div className="flex min-h-screen items-center justify-center bg-white px-4 font-['Space_Grotesk'] lg:py-10">
             <div className="h-fit min-h-100 w-full border-[3px] p-5 shadow-[5px_5px_0px_#000] lg:w-1/2">

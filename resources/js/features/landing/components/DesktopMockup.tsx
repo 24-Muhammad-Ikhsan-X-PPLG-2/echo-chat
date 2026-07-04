@@ -18,6 +18,7 @@ const DesktopMockup = () => {
         'Jordan L.',
         'Design Guild',
     ];
+
     return (
         <div className="overflow-hidden border-[3px] border-black bg-white shadow-[8px_8px_0px_#000]">
             <div className="flex items-center gap-2 bg-black px-3 py-2">

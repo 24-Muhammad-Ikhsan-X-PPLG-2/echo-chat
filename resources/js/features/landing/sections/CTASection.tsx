@@ -1,6 +1,6 @@
+import { ArrowRight } from 'lucide-react';
 import React from 'react';
 import FadeIn from '../components/FadeIn';
-import { ArrowRight } from 'lucide-react';
 
 const CTASection = () => {
     return (

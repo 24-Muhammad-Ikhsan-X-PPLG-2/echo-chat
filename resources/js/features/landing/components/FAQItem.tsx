@@ -4,6 +4,7 @@ import { useState } from 'react';
 
 function FAQItem({ q, a }: { q: string; a: string }) {
     const [open, setOpen] = useState(false);
+
     return (
         <div className="overflow-hidden border-[3px] border-black">
             <button

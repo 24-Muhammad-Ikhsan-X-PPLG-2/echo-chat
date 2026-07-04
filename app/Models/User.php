@@ -11,6 +11,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Carbon;
 use Illuminate\Database\Eloquent\Casts\Attribute;
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
 
 /**
  * @property int $id
@@ -23,12 +24,12 @@ use Illuminate\Database\Eloquent\Casts\Attribute;
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
-#[Fillable(['username', 'full_name', 'email', 'password'])]
+#[Fillable(['username', 'full_name', 'email', 'password', 'public_key', 'last_seen'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
-    use HasFactory, Notifiable;
+    use HasFactory, Notifiable, HasUuids;
 
     /**
      * Get the attributes that should be cast.
@@ -46,6 +47,29 @@ class User extends Authenticatable
     {
         return Attribute::make(
             set: fn($val) => strtolower(str_replace(' ', '', $val))
+        );
+    }
+    public function conversations()
+    {
+        return $this->belongsToMany(
+            Conversations::class,
+            'conversation_members',
+            'user_id',
+            'conversation_id'
+        );
+    }
+    public function messages()
+    {
+        return $this->hasMany(
+            Messages::class,
+            'sender_id'
+        );
+    }
+    public function conversationMembers()
+    {
+        return $this->hasMany(
+            ConversationMembers::class,
+            'user_id'
         );
     }
 }

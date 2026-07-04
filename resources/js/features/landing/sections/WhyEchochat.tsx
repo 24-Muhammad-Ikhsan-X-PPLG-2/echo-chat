@@ -1,6 +1,6 @@
+import { CheckCheck, X } from 'lucide-react';
 import React from 'react';
 import FadeIn from '../components/FadeIn';
-import { CheckCheck, X } from 'lucide-react';
 
 const WhyEchochat = () => {
     return (

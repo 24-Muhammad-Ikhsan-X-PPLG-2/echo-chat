@@ -1,6 +1,6 @@
+import { motion } from 'motion/react';
 import FadeIn from '../components/FadeIn';
 import { stats } from '../constant';
-import { motion } from 'motion/react';
 
 const StatsSection = () => {
     return (

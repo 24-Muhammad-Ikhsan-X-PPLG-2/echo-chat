@@ -1,8 +1,16 @@
-import { useState } from 'react';
-import { SubmitHandler, useForm } from 'react-hook-form';
-import { loginScheme, LoginSchemeType } from '../scheme';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { router } from '@inertiajs/react';
+import { useState } from 'react';
+import { useForm } from 'react-hook-form';
+import type { SubmitHandler } from 'react-hook-form';
+
+import { E2EE } from '@/features/chat/e2ee';
+import { cryptoMan } from '@/lib/crypto-man';
+import { KeyStorage } from '@/lib/key-storage';
+import { fetchApi } from '@/lib/utils';
+
+import { loginScheme } from '../scheme';
+import type { LoginSchemeType } from '../scheme';
 
 const useLogin = () => {
     const [isLoading, setIsLoading] = useState(false);
@@ -19,7 +27,7 @@ const useLogin = () => {
             rememberMe: false,
         },
     });
-    const handleSignIn: SubmitHandler<LoginSchemeType> = ({
+    const handleSignIn: SubmitHandler<LoginSchemeType> = async ({
         email,
         password,
         rememberMe,
@@ -34,18 +42,41 @@ const useLogin = () => {
             {
                 onBefore: () => setIsLoading(true),
                 onError: (errors) => {
-                    Object.entries(errors).map(([field, message]) => {
+                    for (const [field, message] of Object.entries(errors)) {
                         setError(field as keyof LoginSchemeType, {
                             message,
                         });
-                    });
+                    }
                 },
                 onFinish: () => setIsLoading(false),
+                onSuccess: async () => {
+                    const res = await fetchApi({
+                        url: '/key/get',
+                    });
+
+                    if (!res.data) {
+                        throw new Error(res.message);
+                    }
+
+                    const privateKeyString = await cryptoMan.decrypt(
+                        {
+                            ciphertext: res.data.key,
+                            iv: res.data.iv,
+                            salt: res.data.salt,
+                        },
+                        password,
+                    );
+                    const privateKey =
+                        await E2EE.importPrivateKey(privateKeyString);
+                    await KeyStorage.save(privateKey);
+                    router.get('/');
+                },
                 preserveScroll: true,
                 preserveState: true,
             },
         );
     };
+
     return {
         register,
         handleSubmit,

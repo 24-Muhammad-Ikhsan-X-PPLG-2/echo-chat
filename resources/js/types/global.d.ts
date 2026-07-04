@@ -1,3 +1,4 @@
+import type Pusher from 'pusher-js';
 import type { Auth } from '@/types/auth';
 
 declare module 'react' {
@@ -15,5 +16,11 @@ declare module '@inertiajs/core' {
             sidebarOpen: boolean;
             [key: string]: unknown;
         };
+    }
+}
+
+declare global {
+    interface Window {
+        Pusher: typeof Pusher;
     }
 }

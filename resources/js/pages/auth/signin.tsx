@@ -1,9 +1,9 @@
+import { Link, usePage } from '@inertiajs/react';
+import { MessageCircle } from 'lucide-react';
 import EmailField from '@/features/login/components/EmailField';
 import PasswordField from '@/features/login/components/PasswordField';
-import { MessageCircle } from 'lucide-react';
-import { Link, usePage } from '@inertiajs/react';
-import Google from '@/icons/Google';
 import useLogin from '@/features/login/hooks/useLogin';
+import Google from '@/icons/Google';
 
 const SignIn = () => {
     const {
@@ -11,6 +11,7 @@ const SignIn = () => {
     } = usePage().props;
     const { errors, handleSignIn, handleSubmit, isLoading, register } =
         useLogin();
+
     return (
         <div className="flex min-h-screen flex-col items-center justify-center bg-white px-4 font-['Space_Grotesk']">
             {success && (

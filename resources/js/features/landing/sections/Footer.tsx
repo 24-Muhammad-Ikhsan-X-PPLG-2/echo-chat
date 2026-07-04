@@ -1,7 +1,7 @@
+import { MessageCircle } from 'lucide-react';
 import Github from '@/icons/Github';
 import Linkedin from '@/icons/Linkedin';
 import Twitter from '@/icons/Twitter';
-import { MessageCircle } from 'lucide-react';
 
 const Footer = () => {
     return (

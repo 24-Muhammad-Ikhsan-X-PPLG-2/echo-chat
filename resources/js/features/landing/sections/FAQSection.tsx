@@ -1,7 +1,7 @@
 import React from 'react';
 import FadeIn from '../components/FadeIn';
-import { faqs } from '../constant';
 import FAQItemDark from '../components/FAQItemDark';
+import { faqs } from '../constant';
 
 const FAQSection = () => {
     return (
