@@ -12,6 +12,7 @@ export interface ChatData {
     attachments: any[];
     reply_to: any;
     pending: boolean;
+    decryptFailed?: boolean;
     iv: string;
     created_at: string;
 }

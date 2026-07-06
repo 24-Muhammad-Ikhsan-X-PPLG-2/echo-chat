@@ -11,6 +11,8 @@ import type { Chat, ChatData } from '@/types/chat';
 
 import { E2EE, SharedKeyCache } from '../e2ee';
 import { groupedMessages } from '../utils';
+import { PrivateKeyNotFound } from '@/lib/custom-errors';
+import { toast } from 'react-toastify';
 
 type UseConversationMessagesResult = {
     groups:
@@ -32,16 +34,12 @@ export function useConversationMessages(
     const {
         auth: { user },
     } = usePage().props;
+    const requestId = useRef(0);
     const contacts = useChatStore((state) => state.contacts);
     const setContacts = useChatStore((state) => state.setContacts);
     const selectedConversation = useChatStore(
         (state) => state.selectedConversation,
     );
-    const activeConversationIdRef = useRef(conversationId);
-
-    useEffect(() => {
-        activeConversationIdRef.current = conversationId;
-    }, [conversationId]);
 
     const queryKey = ['messages', conversationId];
     const { data, fetchNextPage, isLoading } = useInfiniteQuery<Chat>({
@@ -90,7 +88,7 @@ export function useConversationMessages(
             const privateKey = await KeyStorage.get();
 
             if (!privateKey) {
-                throw new Error('Private key not found.');
+                throw new PrivateKeyNotFound();
             }
 
             const sharedKey = await SharedKeyCache.getOrCreate(
@@ -99,15 +97,31 @@ export function useConversationMessages(
                 publicKey,
             );
 
+            const decrypt = (message: ChatData) => {
+                return E2EE.decryptMessage(
+                    sharedKey,
+                    message.content,
+                    message.iv,
+                );
+            };
+
             return Promise.all(
-                messages.map(async (message) => ({
-                    ...message,
-                    content: await E2EE.decryptMessage(
-                        sharedKey,
-                        message.content,
-                        message.iv,
-                    ),
-                })),
+                messages.map(async (message) => {
+                    try {
+                        return {
+                            ...message,
+                            content: await decrypt(message),
+                            decryptFailed: false,
+                        };
+                    } catch (e) {
+                        console.error(e);
+                        return {
+                            ...message,
+                            content: '[Unable to decrypt message]',
+                            decryptFailed: true,
+                        };
+                    }
+                }),
             );
         },
         [],
@@ -234,19 +248,27 @@ export function useConversationMessages(
 
     useEffect(() => {
         let cancelled = false;
+        requestId.current++;
+        const id = requestId.current;
 
         void (async () => {
-            const decrypted = await getDecryptedMessage({
-                conversationId,
-                messages,
-                publicKey,
-            });
+            try {
+                const decrypted = await getDecryptedMessage({
+                    conversationId,
+                    messages,
+                    publicKey,
+                });
 
-            if (
-                !cancelled &&
-                activeConversationIdRef.current === conversationId
-            ) {
-                setDecryptedMessages(decrypted);
+                if (!cancelled && id === requestId.current) {
+                    setDecryptedMessages(decrypted);
+                }
+            } catch (err) {
+                console.error(err);
+                if (err instanceof PrivateKeyNotFound) {
+                    toast.error('Private key not found.');
+                    return;
+                }
+                toast.error('Failed to load conversation.');
             }
         })();
 

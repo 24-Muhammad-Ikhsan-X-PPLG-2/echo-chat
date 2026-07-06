@@ -13,6 +13,7 @@ import { useChatStore } from '@/stores/chatStore';
 import type { Chat, ChatData } from '@/types/chat';
 
 import { E2EE, SharedKeyCache } from '../e2ee';
+import { PrivateKeyNotFound } from '@/lib/custom-errors';
 
 type SendMessageInput = {
     content: string;
@@ -181,10 +182,9 @@ export function useSendMessage(
         }
 
         const privateKey = await KeyStorage.get();
-        console.log(privateKey);
 
         if (!privateKey) {
-            throw new Error('No private key found.');
+            throw new PrivateKeyNotFound();
         }
 
         const sharedKey = await SharedKeyCache.getOrCreate(
