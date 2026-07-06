@@ -27,4 +27,5 @@ export type ConversationContact = {
     id: string;
     username: string;
     public_key: string;
+    last_seen?: string;
 };

@@ -40,6 +40,7 @@ class ConversationResource extends JsonResource
                 'username' => $contact->username,
                 'avatar_url' => $contact->avatar_url,
                 'public_key' => $contact->public_key,
+                'last_seen' => $contact->last_seen,
             ] : null,
 
             'last_read_at' => $contact->pivot?->last_read_at,

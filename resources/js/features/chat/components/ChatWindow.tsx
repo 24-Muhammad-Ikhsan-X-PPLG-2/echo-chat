@@ -4,12 +4,13 @@ import { useEffect } from 'react';
 
 import echo from '@/lib/echo';
 import { KeyStorage } from '@/lib/key-storage';
-import { contactSort } from '@/lib/utils';
+import { contactSort, fetchApi } from '@/lib/utils';
 import { useChatStore } from '@/stores/chatStore';
 import type { ConversationData } from '@/types/conversation';
 
 import { E2EE, SharedKeyCache } from '../e2ee';
 import ConversationView from './ConversationView';
+import { update } from '@/actions/App/Http/Controllers/LastSeenController';
 
 type ConversationUnread = {
     conversation_id: string;
@@ -184,6 +185,45 @@ const useChatWindow = () => {
             echo.leave(`user.${user.id}`);
         };
     }, [selectedConversation?.contact.id, setContacts, user.id]);
+    useEffect(() => {
+        const channel = echo.channel('last_seen');
+        const onLastSeenUpdate = (event: { user_id: string; time: string }) => {
+            if (event.user_id === user.id) return;
+            setContacts((prev) => {
+                if (!prev) return prev;
+                return prev.map((item) =>
+                    item.contact.id === event.user_id
+                        ? {
+                              ...item,
+                              contact: {
+                                  ...item.contact,
+                                  last_seen: event.time,
+                              },
+                          }
+                        : item,
+                );
+            });
+        };
+        channel.listen('.last_seen.update', onLastSeenUpdate);
+        return () => {
+            channel.stopListening('.last_seen.update');
+            echo.leave('last_seen');
+        };
+    }, [setContacts, user.id]);
+    useEffect(() => {
+        const updateOnline = async () => {
+            console.log('update online');
+            await fetchApi({
+                url: '/last_seen/update',
+                method: 'PATCH',
+            });
+        };
+        updateOnline();
+        const interval = setInterval(() => {
+            updateOnline();
+        }, 10000);
+        return () => clearInterval(interval);
+    }, []);
 
     return { selectedConversation };
 };
