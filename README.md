@@ -46,7 +46,7 @@ A modern real-time chat application built with **Laravel**, **Laravel Reverb**, 
 ### Clone the repository
 
 ```bash
-git clone https://github.com/username/echo-chat.git
+git clone https://github.com/24-Muhammad-Ikhsan-X-PPLG-2/echo-chat.git
 cd echo-chat
 ```
 
@@ -54,7 +54,7 @@ cd echo-chat
 
 ```bash
 composer install
-npm install
+bun install
 ```
 
 ### Configure environment
@@ -86,13 +86,13 @@ php artisan migrate
 Terminal 1
 
 ```bash
-php artisan serve
+composer run dev
 ```
 
 Terminal 2
 
 ```bash
-npm run dev
+php artisan queue:work
 ```
 
 Terminal 3
