@@ -115,8 +115,3 @@ php artisan reverb:start
 ![Conversation](screenshots/conversation.png)
 -->
 
----
-
-## License
-
-This project is licensed under the MIT License.
