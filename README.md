@@ -6,7 +6,6 @@
 ![Laravel Reverb](https://img.shields.io/badge/Laravel-Reverb-F9322C)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1?logo=postgresql\&logoColor=white)
 ![Vite](https://img.shields.io/badge/Vite-646CFF?logo=vite\&logoColor=white)
-![License](https://img.shields.io/badge/License-MIT-green)
 
 A modern real-time chat application built with **Laravel**, **Laravel Reverb**, **React**, **Inertia.js**, and **PostgreSQL**. Echo Chat delivers a fast and responsive messaging experience powered by WebSockets while featuring a **Neo Brutalism** user interface.
 
