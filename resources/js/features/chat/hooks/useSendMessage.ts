@@ -1,25 +1,27 @@
 import { usePage } from '@inertiajs/react';
-import {
-    InfiniteData,
-    useMutation,
-    useQueryClient,
-} from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import type { InfiniteData } from '@tanstack/react-query';
 import type { FormEvent } from 'react';
 import { useCallback, useRef, useState } from 'react';
 
+import { toast } from 'react-toastify';
+import type { Id } from 'react-toastify';
+import { PrivateKeyNotFound } from '@/lib/custom-errors';
 import { KeyStorage } from '@/lib/key-storage';
 import { contactSort, fetchApi } from '@/lib/utils';
 import { useChatStore } from '@/stores/chatStore';
 import type { Chat, ChatData } from '@/types/chat';
 
 import { E2EE, SharedKeyCache } from '../e2ee';
-import { PrivateKeyNotFound } from '@/lib/custom-errors';
+import { compressImages } from '../utils';
 
 type SendMessageInput = {
     content: string;
     messageType: string;
     iv: string;
     contentNotEncrypt: string;
+    images?: FileList;
+    documents?: FileList;
 };
 
 type UseSendMessageResult = {
@@ -32,23 +34,26 @@ type UseSendMessageResult = {
 export function useSendMessage(
     conversationId: string,
     publicKey: string,
+    images: FileList | null,
+    documents: FileList | null,
+    setImages: (v: FileList | null) => void,
 ): UseSendMessageResult {
     const queryClient = useQueryClient();
+    const toastId = useRef<Id | null>(null);
     const setContacts = useChatStore((state) => state.setContacts);
     const {
         auth: { user },
     } = usePage().props;
     const [message, setMessage] = useState('');
     const isTyping = useRef(false);
-    const timeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const timeout = useRef<number | null>(null);
 
     const whisperTyping = useCallback(
         async (val: boolean) => {
             const endpoint = val ? 'on' : 'off';
-            const res = await fetchApi({
+            await fetchApi({
                 url: `/conversations/${conversationId}/typing/${endpoint}`,
             });
-            console.log(res);
         },
         [conversationId],
     );
@@ -75,7 +80,13 @@ export function useSendMessage(
     );
 
     const mutation = useMutation({
-        mutationFn: async ({ content, messageType, iv }: SendMessageInput) => {
+        mutationFn: async ({
+            content,
+            messageType,
+            iv,
+            documents,
+            images,
+        }: SendMessageInput) => {
             return fetchApi({
                 url: `/conversations/${conversationId}/messages`,
                 method: 'POST',
@@ -84,6 +95,8 @@ export function useSendMessage(
                     content,
                     message_type: messageType,
                     iv,
+                    images: images ?? null,
+                    documents: documents ?? null,
                 },
             });
         },
@@ -95,14 +108,27 @@ export function useSendMessage(
             const previousMessages = queryClient.getQueryData<
                 InfiniteData<Chat>
             >(['messages', conversationId]);
-
+            const messageId = crypto.randomUUID();
+            const now = new Date().toISOString();
+            const attachments =
+                newMessage.messageType && newMessage.images
+                    ? Array.from(newMessage.images).map((item) => ({
+                          message_id: messageId,
+                          id: Math.floor(Math.random() * 10),
+                          size: item.size,
+                          type: item.type,
+                          url: URL.createObjectURL(item),
+                          created_at: now,
+                          updated_at: now,
+                      }))
+                    : [];
             const optimisticMessage: ChatData = {
-                id: crypto.randomUUID(),
+                id: messageId,
                 content: newMessage.content,
                 type: newMessage.messageType,
-                created_at: new Date().toISOString(),
+                created_at: now,
                 pending: true,
-                attachments: [],
+                attachments,
                 reply_to: null,
                 sender: {
                     id: user.id,
@@ -149,7 +175,7 @@ export function useSendMessage(
                                       message: newMessage.contentNotEncrypt,
                                       iv: newMessage.iv,
                                       sender_id: user.id,
-                                      type: newMessage.messageType,
+                                      message_type: newMessage.messageType,
                                   },
                                   updated_at: new Date().toISOString(),
                               }
@@ -162,6 +188,7 @@ export function useSendMessage(
         },
         onError: (error, _variables, context) => {
             console.error(error);
+            toast.error(error.message);
             queryClient.setQueryData(
                 ['messages', conversationId],
                 context?.previousMessages,
@@ -177,7 +204,7 @@ export function useSendMessage(
     const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
 
-        if (!message.trim()) {
+        if (!message.trim() || message.trim() === '') {
             return;
         }
 
@@ -194,6 +221,39 @@ export function useSendMessage(
         );
         const encrypted = await E2EE.encryptMessage(sharedKey, message);
         void whisperTyping(false);
+
+        if (images) {
+            toastId.current = toast.loading('Compress Image...');
+            const compressedImages = await compressImages(images);
+
+            if (!compressedImages) {
+                toast.dismiss(toastId.current);
+                toastId.current = null;
+
+                return;
+            }
+
+            toast.update(toastId.current, {
+                render: 'Success Compress Image',
+                type: 'success',
+                isLoading: false,
+                autoClose: 3000,
+            });
+
+            mutation.mutate({
+                content: encrypted.ciphertext,
+                messageType: 'image',
+                iv: encrypted.iv,
+                contentNotEncrypt: message,
+                images: compressedImages,
+            });
+            setImages(null);
+            setMessage('');
+            toastId.current = null;
+
+            return;
+        }
+
         mutation.mutate({
             content: encrypted.ciphertext,
             messageType: 'text',

@@ -27,7 +27,9 @@ class MessageStoreRequest extends FormRequest
             'content' => ['sometimes'],
             'message_type' => ['required'],
             'reply_to' => ['sometimes'],
-            'iv' => ['required', 'string']
+            'iv' => ['required', 'string'],
+            'images' => ['sometimes', 'array', 'nullable'],
+            'images.*' => ['image', 'max:10240', 'sometimes', 'nullable']
         ];
     }
 }

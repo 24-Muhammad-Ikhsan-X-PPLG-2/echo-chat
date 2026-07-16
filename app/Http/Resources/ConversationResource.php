@@ -29,7 +29,8 @@ class ConversationResource extends JsonResource
         $lastMessage = $this->messages()->latest('created_at')->first([
             'content',
             'iv',
-            'sender_id'
+            'sender_id',
+            'message_type'
         ]);
         return [
             'id' => $this->id,

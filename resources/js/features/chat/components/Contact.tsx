@@ -1,9 +1,10 @@
 import { usePage } from '@inertiajs/react';
-import { memo } from 'react';
+import { Image } from 'lucide-react';
 import type { FC } from 'react';
 
 import { useChatStore } from '@/stores/chatStore';
 import type { ConversationData } from '@/types/conversation';
+import { shortText } from '../utils';
 
 type ContactProps = {
     active?: boolean;
@@ -14,6 +15,7 @@ const Contact: FC<ContactProps> = ({ active = false, item }) => {
     const setSelectedConversation = useChatStore(
         (state) => state.setSelectedConversation,
     );
+    const isImage = item.last_message?.message_type === 'image';
     const {
         auth: { user },
     } = usePage().props;
@@ -39,15 +41,21 @@ const Contact: FC<ContactProps> = ({ active = false, item }) => {
                 <p className="text-xl font-bold">{item.contact.username}</p>
                 {item.last_message &&
                     (user.id == item.last_message.sender_id ? (
-                        <p className="">
+                        <p className="flex gap-1">
                             You:{' '}
-                            <span className="text-gray-500">
-                                {item.last_message.message}
+                            <span className="flex items-center gap-1 text-gray-500">
+                                {isImage && (
+                                    <Image size={18} />
+                                )}
+                                {shortText(item.last_message.message, isImage ? 16 : 21)}
                             </span>
                         </p>
                     ) : (
-                        <p className="text-gray-500">
-                            {item.last_message.message}
+                        <p className="flex gap-1 text-gray-500">
+                            {isImage && (
+                                <Image size={18}/>
+                            )}
+                            {shortText(item.last_message.message, isImage ? 16 : 21)}
                         </p>
                     ))}
             </div>

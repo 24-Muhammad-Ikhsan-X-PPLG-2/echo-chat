@@ -1,11 +1,12 @@
-import { useCallback, useEffect, useMemo, useState, type FC } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import type { FC } from "react";
 import { useConversationMessages } from '@/features/chat/hooks/useConversationMessages';
+import { useChatStore } from '@/stores/chatStore';
 import type { ConversationData } from '@/types/conversation';
 import ChatHeader from './ChatHeader';
 import ChatInput from './ChatInput';
 import Loading from './Loading';
 import MessageGroupList from './MessageGroupList';
-import { useChatStore } from '@/stores/chatStore';
 
 type Props = {
     selectedConversation: ConversationData;
@@ -33,6 +34,7 @@ const ConversationView: FC<Props> = ({ selectedConversation }) => {
     }, []);
     const isOnline = useMemo(() => {
         if (!last_seen) return false;
+
         return now - new Date(last_seen).getTime() < 30000;
     }, [now, last_seen]);
 

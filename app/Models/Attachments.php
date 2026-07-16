@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Storage;
 
 #[Fillable(
     'message_id',
@@ -13,6 +14,10 @@ use Illuminate\Database\Eloquent\Model;
 )]
 class Attachments extends Model
 {
+    public function getUrlAttribute($value): string
+    {
+        return Storage::disk('public')->url($value);
+    }
     public function message()
     {
         return $this->belongsTo(

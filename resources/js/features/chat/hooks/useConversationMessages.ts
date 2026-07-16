@@ -3,6 +3,8 @@ import type { InfiniteData } from '@tanstack/react-query';
 import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
+import { toast } from 'react-toastify';
+import { PrivateKeyNotFound } from '@/lib/custom-errors';
 import echo from '@/lib/echo';
 import { KeyStorage } from '@/lib/key-storage';
 import { fetchApi } from '@/lib/utils';
@@ -11,8 +13,6 @@ import type { Chat, ChatData } from '@/types/chat';
 
 import { E2EE, SharedKeyCache } from '../e2ee';
 import { groupedMessages } from '../utils';
-import { PrivateKeyNotFound } from '@/lib/custom-errors';
-import { toast } from 'react-toastify';
 
 type UseConversationMessagesResult = {
     groups:
@@ -108,6 +108,14 @@ export function useConversationMessages(
             return Promise.all(
                 messages.map(async (message) => {
                     try {
+                        if (message.content.trim() === '') {
+                            return {
+                                ...message,
+                                content: '',
+                                decryptFailed: false,
+                            };
+                        }
+
                         return {
                             ...message,
                             content: await decrypt(message),
@@ -115,6 +123,7 @@ export function useConversationMessages(
                         };
                     } catch (e) {
                         console.error(e);
+
                         return {
                             ...message,
                             content: '[Unable to decrypt message]',

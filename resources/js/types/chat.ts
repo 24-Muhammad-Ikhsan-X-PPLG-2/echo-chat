@@ -9,12 +9,22 @@ export interface ChatData {
     content: string;
     type: string;
     sender: Sender;
-    attachments: any[];
+    attachments: Attachment[];
     reply_to: any;
     pending: boolean;
     decryptFailed?: boolean;
     iv: string;
     created_at: string;
+}
+
+export interface Attachment {
+    created_at: string;
+    id: number;
+    message_id: string;
+    size: number;
+    type: string;
+    updated_at: string;
+    url: string;
 }
 
 export interface Sender {

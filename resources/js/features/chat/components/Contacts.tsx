@@ -111,6 +111,7 @@ const useContacts = () => {
             cancelled = true;
         };
     }, [contacts, setContacts]);
+
     return {
         contacts,
         isLoading,

@@ -9,6 +9,7 @@ use App\Events\UpdateLastMessage;
 use App\Http\Requests\MessageStoreRequest;
 use App\Http\Requests\UpdateLastReadRequest;
 use App\Http\Resources\MessageResource;
+use App\Models\Attachments;
 use App\Models\ConversationMembers;
 use App\Models\Conversations;
 use App\Models\Messages;
@@ -21,10 +22,22 @@ class MessageController extends Controller
     {
         try {
             $user_id = Auth::user()->id;
+            $images = $req->file('images');
             $message = Messages::query()->create([
-                ...$req->validated(),
+                ...$req->safe()->except(['images', 'images.*']),
                 'sender_id' => $user_id,
             ]);
+            if ($images) {
+                foreach ($images as $image) {
+                    $path = $image->store('chat-images', 'public');
+                    Attachments::query()->create([
+                        'message_id' => $message->id,
+                        'size' => $image->getSize(),
+                        'type' => $image->getMimeType(),
+                        'url' => $path
+                    ]);
+                }
+            }
             Conversations::query()->where('id', '=', $message->conversation_id)->update([
                 'updated_at' => now()
             ]);
@@ -44,20 +57,27 @@ class MessageController extends Controller
     }
     public function get(Conversations $conversation)
     {
-        $user = Auth::user();
-        $isMember = $conversation->members()->where('users.id', $user->id)->exists();
-        if (!$isMember) {
+        try {
+            $user = Auth::user();
+            $isMember = $conversation->members()->where('users.id', $user->id)->exists();
+            if (!$isMember) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Unauthorized',
+                ], 403);
+            }
+            $messages = $conversation->messages()->with([
+                'sender',
+                'attachments',
+                'replyTo',
+            ])->latest()->paginate(10);
+            return MessageResource::collection($messages);
+        } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Unauthorized',
-            ], 403);
+                'message' => $e->getMessage()
+            ]);
         }
-        $messages = $conversation->messages()->with([
-            'sender',
-            'attachments',
-            'replyTo',
-        ])->latest()->paginate(10);
-        return MessageResource::collection($messages);
     }
     public function updateLastRead(Conversations $conversation)
     {

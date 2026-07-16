@@ -19,7 +19,7 @@ export type ConversationLastMessage = {
     message: string;
     iv: string;
     sender_id: string;
-    type: string;
+    message_type: string;
 };
 
 export type ConversationContact = {

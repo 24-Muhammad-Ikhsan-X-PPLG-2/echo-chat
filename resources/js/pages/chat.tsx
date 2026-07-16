@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import AddContact from '@/features/chat/components/AddContact';
 import ChatWindow from '@/features/chat/components/ChatWindow';
 import Contacts from '@/features/chat/components/Contacts';
+import ImageModal from '@/features/chat/components/ImageModal';
 import Sidebar from '@/features/chat/components/Sidebar';
 import { contactSort } from '@/lib/utils';
 import { useChatStore, useStateGlobal } from '@/stores/chatStore';
@@ -19,6 +20,7 @@ const Chat: FC<Props> = ({ conversations }) => {
 
     return (
         <>
+            <ImageModal/>
             <div className="relative flex overflow-hidden bg-white font-['Space_Grotesk']">
                 <Sidebar />
                 {showAddContact ? <AddContact /> : <Contacts />}

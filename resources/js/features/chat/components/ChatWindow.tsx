@@ -212,7 +212,6 @@ const useChatWindow = () => {
     }, [setContacts, user.id]);
     useEffect(() => {
         const updateOnline = async () => {
-            console.log('update online');
             await fetchApi({
                 url: '/last_seen/update',
                 method: 'PATCH',

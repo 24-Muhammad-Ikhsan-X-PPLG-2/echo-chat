@@ -21,6 +21,22 @@ type StateGlobal = {
     setShowAddContact: (
         showAddContact: boolean | ((prev: boolean) => boolean),
     ) => void;
+    previewImage: PreviewImage | null;
+    setPreviewImage: (
+        previewImages:
+            | PreviewImage
+            | null
+            | ((prev: PreviewImage | null) => PreviewImage | null),
+    ) => void;
+};
+
+type PreviewImage = {
+    images: DataPreviewImage[];
+    initialIndex: number;
+};
+
+type DataPreviewImage = {
+    url: string;
 };
 
 export const useChatStore = create<ChatStore>((set) => ({
@@ -47,5 +63,13 @@ export const useStateGlobal = create<StateGlobal>((set) => ({
                 typeof showAddContact === 'function'
                     ? showAddContact(state.showAddContact)
                     : showAddContact,
+        })),
+    previewImage: null,
+    setPreviewImage: (previewImage) =>
+        set((state) => ({
+            previewImage:
+                typeof previewImage === 'function'
+                    ? previewImage(state.previewImage)
+                    : previewImage,
         })),
 }));
