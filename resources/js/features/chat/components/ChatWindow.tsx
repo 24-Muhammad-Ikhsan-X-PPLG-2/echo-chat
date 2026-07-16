@@ -10,7 +10,6 @@ import type { ConversationData } from '@/types/conversation';
 
 import { E2EE, SharedKeyCache } from '../e2ee';
 import ConversationView from './ConversationView';
-import { update } from '@/actions/App/Http/Controllers/LastSeenController';
 
 type ConversationUnread = {
     conversation_id: string;
