@@ -1,8 +1,9 @@
-import { Paperclip, Send, X } from 'lucide-react';
-import { useState, type FC } from 'react';
+import { Send, X } from 'lucide-react';
+import { useState } from 'react';
+import type { FC } from 'react';
 import { useSendMessage } from '@/features/chat/hooks/useSendMessage';
-import SendAttachment from './SendAttachment';
 import ImagesPreview from './ImagesPreview';
+import SendAttachment from './SendAttachment';
 
 type Props = {
     conversationId: string;

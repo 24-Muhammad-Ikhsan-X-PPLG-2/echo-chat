@@ -1,11 +1,6 @@
 import { File, Image, MapPin, Paperclip } from 'lucide-react';
-import {
-    useEffect,
-    useRef,
-    useState,
-} from 'react';
-import type { ChangeEvent, Dispatch, FC, SetStateAction } from "react"
-import { toast } from 'react-toastify';
+import type { Dispatch, FC, SetStateAction } from 'react';
+import useSendAttachment from '../hooks/useSendAttachment';
 
 type Props = {
     setImages: Dispatch<SetStateAction<FileList | null>>;
@@ -15,8 +10,6 @@ type Props = {
     disabled?: boolean;
 };
 
-const MAX_SIZE = 20 * 1024 * 1024;
-
 const SendAttachment: FC<Props> = ({
     setImages,
     setDocuments,
@@ -24,66 +17,8 @@ const SendAttachment: FC<Props> = ({
     images,
     disabled = false,
 }) => {
-    const containerRef = useRef<HTMLDivElement>(null);
-    const [show, setShow] = useState(false);
-    useEffect(() => {
-        const clickOutside = (e: MouseEvent) => {
-            if (
-                containerRef.current &&
-                !containerRef.current.contains(e.target as Node)
-            ) {
-                setShow(false);
-            }
-        };
-        window.addEventListener('mousedown', clickOutside);
-
-        return () => window.removeEventListener('mousedown', clickOutside);
-    }, []);
-    const handleClickButton = () =>
-        setShow((prev) => {
-            if (images || documents) {
-                return false;
-            }
-
-            return !prev;
-        });
-    const handleChange = (e: ChangeEvent<HTMLInputElement>, type: string) => {
-        const files = e.target.files;
-
-        if (!files) {
-            return;
-        }
-
-        const tempFiles = Array.from(files);
-        const invalidFileSize = tempFiles.find((file) => file.size > MAX_SIZE);
-        const invalidFileType = tempFiles.find(
-            (file) => !file.type.startsWith('image/'),
-        );
-
-        if (invalidFileType) {
-            toast.error(`${invalidFileType.name} not an image.`);
-            e.target.value = '';
-
-            return;
-        }
-
-        if (invalidFileSize) {
-            toast.error(
-                `${invalidFileSize.name} exceeds the maximum limit of 10 MB.`,
-            );
-            e.target.value = '';
-
-            return;
-        }
-
-        if (type === 'images') {
-            setImages(files);
-        } else {
-            setDocuments(files);
-        }
-
-        setShow(false);
-    };
+    const { handleChange, handleClickButton, show, containerRef } =
+        useSendAttachment({ documents, images, setDocuments, setImages });
 
     return (
         <div ref={containerRef} className="relative size-fit">

@@ -29,3 +29,9 @@ export type ConversationContact = {
     public_key: string;
     last_seen?: string;
 };
+
+export type ConversationUnread = {
+    conversation_id: string;
+    user_id: string;
+    last_read_at: string;
+};

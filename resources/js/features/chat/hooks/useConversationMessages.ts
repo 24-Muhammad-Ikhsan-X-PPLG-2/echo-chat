@@ -42,21 +42,24 @@ export function useConversationMessages(
     );
 
     const queryKey = ['messages', conversationId];
-    const { data, fetchNextPage, isLoading } = useInfiniteQuery<Chat>({
-        queryKey,
-        queryFn: async ({ pageParam = 1 }) => {
-            return (await fetchApi({
-                url: `/conversations/${conversationId}/messages?page=${pageParam}`,
-            })) as Chat;
-        },
-        initialPageParam: 1,
-        getNextPageParam: (lastPage) => {
-            const currentPage = lastPage.meta.current_page;
-            const lastPageNumber = lastPage.meta.last_page;
+    const { data, fetchNextPage, isLoading, hasNextPage, isFetchingNextPage } =
+        useInfiniteQuery<Chat>({
+            queryKey,
+            queryFn: async ({ pageParam = 1 }) => {
+                return (await fetchApi({
+                    url: `/conversations/${conversationId}/messages?page=${pageParam}`,
+                })) as Chat;
+            },
+            initialPageParam: 1,
+            getNextPageParam: (lastPage) => {
+                const currentPage = lastPage.meta.current_page;
+                const lastPageNumber = lastPage.meta.last_page;
 
-            return currentPage < lastPageNumber ? currentPage + 1 : undefined;
-        },
-    });
+                return currentPage < lastPageNumber
+                    ? currentPage + 1
+                    : undefined;
+            },
+        });
 
     const messages = useMemo(
         () => [...(data?.pages.flatMap((page) => page.data) ?? [])].reverse(),
@@ -285,10 +288,15 @@ export function useConversationMessages(
             cancelled = true;
         };
     }, [conversationId, getDecryptedMessage, messages, publicKey]);
+    const loadMore = async () => {
+        if (isFetchingNextPage || !hasNextPage) return;
+
+        await fetchNextPage();
+    };
 
     return {
         groups,
-        fetchNextPage,
+        fetchNextPage: loadMore,
         isLoading,
     };
 }

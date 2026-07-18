@@ -1,8 +1,6 @@
-import { useEffect, useMemo, useState } from 'react';
-import type { FC } from "react";
-import { useConversationMessages } from '@/features/chat/hooks/useConversationMessages';
-import { useChatStore } from '@/stores/chatStore';
+import type { FC } from 'react';
 import type { ConversationData } from '@/types/conversation';
+import useConversationView from '../hooks/useConversationView';
 import ChatHeader from './ChatHeader';
 import ChatInput from './ChatInput';
 import Loading from './Loading';
@@ -13,34 +11,18 @@ type Props = {
 };
 
 const ConversationView: FC<Props> = ({ selectedConversation }) => {
-    const [now, setNow] = useState(Date.now());
-    const contacts = useChatStore((state) => state.contacts);
-    const conversationId = selectedConversation.id;
-    const publicKey = selectedConversation.contact.public_key;
-    const last_seen =
-        contacts?.find((item) => item.id === selectedConversation.id)?.contact
-            .last_seen ?? null;
-    const { groups, fetchNextPage, isLoading } = useConversationMessages(
+    const {
+        fetchNextPage,
+        groups,
+        isLoading,
+        isOnline,
         conversationId,
         publicKey,
-    );
-
-    useEffect(() => {
-        setNow(Date.now());
-        const id = setInterval(() => {
-            setNow(Date.now());
-        }, 10000);
-        return () => clearInterval(id);
-    }, []);
-    const isOnline = useMemo(() => {
-        if (!last_seen) return false;
-
-        return now - new Date(last_seen).getTime() < 30000;
-    }, [now, last_seen]);
+    } = useConversationView({ selectedConversation });
 
     return (
         <>
-            {isLoading ? (
+            {!groups || isLoading ? (
                 <Loading />
             ) : (
                 <>
@@ -50,7 +32,7 @@ const ConversationView: FC<Props> = ({ selectedConversation }) => {
                     />
                     <MessageGroupList
                         fetchNextPage={fetchNextPage}
-                        groups={groups!}
+                        groups={groups}
                     />
                     <ChatInput
                         publicKey={publicKey}

@@ -1,44 +1,13 @@
-import { FC, useEffect, useState } from 'react';
-import { createThumbnail } from '../utils';
+import type { FC } from "react";
+import useImagesPreview from '../hooks/useImagesPreview';
 
 type Props = {
     images: FileList;
 };
 
 const ImagesPreview: FC<Props> = ({ images }) => {
-    const [previews, setPreviews] = useState<
-        {
-            file: File;
-            preview: string;
-        }[]
-    >([]);
-    const [remaining, setRemaining] = useState(0);
-    const [isLoading, setIsLoading] = useState(false);
-    useEffect(() => {
-        let cancelled = false;
-        async function loadPreviews() {
-            setIsLoading(true);
-            const files = Array.from(images);
-            const visibleImages = await Promise.all(
-                files.slice(0, 3).map(async (image) => ({
-                    file: image,
-                    preview: await createThumbnail(image),
-                })),
-            );
-            const remaining = files.length - visibleImages.length;
-            setIsLoading(false);
+    const { isLoading, previews, remaining } = useImagesPreview({ images });
 
-            if (!cancelled) {
-                setPreviews(visibleImages);
-                setRemaining(remaining);
-            }
-        }
-        loadPreviews();
-
-        return () => {
-            cancelled = true;
-        };
-    }, [images]);
     return (
         <div className="flex -space-x-5">
             {!isLoading

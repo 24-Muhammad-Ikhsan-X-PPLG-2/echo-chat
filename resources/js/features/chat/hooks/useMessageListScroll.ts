@@ -5,7 +5,6 @@ import {
     useRef,
     useState,
 } from 'react';
-import type { UIEvent } from 'react';
 
 import { useChatStore } from '@/stores/chatStore';
 import type { ChatData } from '@/types/chat';
@@ -15,48 +14,101 @@ type MessageGroup = {
     messages: ChatData[];
 };
 
-export function useMessageListScroll(
-    groups: MessageGroup[],
-    fetchNextPage: () => Promise<unknown>,
-) {
-    const containerRef = useRef<HTMLDivElement>(null);
-    const [isAtBottom, setIsAtBottom] = useState(false);
-    const shouldScrollToBottom = useRef(true);
+type Props = {
+    groups: MessageGroup[];
+    fetchNextPage: () => Promise<unknown>;
+};
+
+export function useMessageListScroll({ groups, fetchNextPage }: Props) {
     const selectedConversation = useChatStore(
         (state) => state.selectedConversation,
     );
-    const prevHeightRef = useRef(0);
+
     const contacts = useChatStore((state) => state.contacts);
-    const contact = selectedConversation
-        ? contacts?.find((item) => item.id === selectedConversation.id)
-        : null;
-    useEffect(() => {
+
+    const contact =
+        selectedConversation && contacts
+            ? contacts.find((item) => item.id === selectedConversation.id)
+            : null;
+
+    const containerRef = useRef<HTMLDivElement>(null);
+
+    const [isAtBottom, setIsAtBottom] = useState(true);
+
+    const shouldScrollToBottom = useRef(true);
+
+    const prevScrollHeight = useRef(0);
+
+    const isLoadingMore = useRef(false);
+
+    const scrollToBottom = useCallback((behavior: ScrollBehavior = 'auto') => {
         const container = containerRef.current;
 
-        if (!container) {
-            return;
-        }
+        if (!container) return;
 
-        const scrollToBottom = () => {
-            container.scrollTop = container.scrollHeight;
-        };
+        container.scrollTo({
+            top: container.scrollHeight,
+            behavior,
+        });
+    }, []);
 
-        if (shouldScrollToBottom.current && groups.length !== 0) {
+    // ketika pindah conversation
+    useEffect(() => {
+        shouldScrollToBottom.current = true;
+    }, [selectedConversation?.id]);
+
+    // auto scroll pertama kali / ketika sedang di bawah
+    useEffect(() => {
+        if (!groups.length) return;
+
+        if (shouldScrollToBottom.current) {
             scrollToBottom();
+
             shouldScrollToBottom.current = false;
+
+            return;
         }
 
         if (isAtBottom) {
             scrollToBottom();
         }
-    }, [groups, isAtBottom, contact?.is_typing]);
+    }, [groups, isAtBottom, scrollToBottom]);
 
-    const handleScroll = useCallback(() => {
+    const loadMore = useCallback(async () => {
         const container = containerRef.current;
 
-        if (!container) {
-            return;
-        }
+        if (!container) return;
+
+        if (isLoadingMore.current) return;
+
+        isLoadingMore.current = true;
+
+        prevScrollHeight.current = container.scrollHeight;
+
+        await fetchNextPage();
+    }, [fetchNextPage]);
+
+    // menjaga posisi scroll setelah prepend message
+    useLayoutEffect(() => {
+        if (!isLoadingMore.current) return;
+
+        const container = containerRef.current;
+
+        if (!container) return;
+
+        const newHeight = container.scrollHeight;
+
+        container.scrollTop += newHeight - prevScrollHeight.current;
+
+        prevScrollHeight.current = 0;
+
+        isLoadingMore.current = false;
+    }, [groups]);
+
+    const handleScroll = useCallback(async () => {
+        const container = containerRef.current;
+
+        if (!container) return;
 
         const distanceFromBottom =
             container.scrollHeight -
@@ -64,48 +116,15 @@ export function useMessageListScroll(
             container.clientHeight;
 
         setIsAtBottom(distanceFromBottom < 50);
-    }, []);
 
-    const loadMore = useCallback(async () => {
-        const container = containerRef.current;
-
-        if (!container) {
-            return;
+        if (container.scrollTop <= 0) {
+            await loadMore();
         }
-
-        prevHeightRef.current = container.scrollHeight;
-        await fetchNextPage();
-    }, [fetchNextPage]);
-
-    const handleScrollEvent = useCallback(
-        async (event: UIEvent<HTMLDivElement>) => {
-            handleScroll();
-
-            if (event.currentTarget.scrollTop === 0) {
-                await loadMore();
-            }
-        },
-        [handleScroll, loadMore],
-    );
-    useLayoutEffect(() => {
-        const container = containerRef.current;
-
-        if (!container) {
-            return;
-        }
-
-        if (prevHeightRef.current === 0) {
-            return;
-        }
-
-        const newHeight = container.scrollHeight;
-        container.scrollTop = newHeight - prevHeightRef.current;
-        prevHeightRef.current = 0;
-    }, [groups]);
+    }, [loadMore]);
 
     return {
         containerRef,
-        handleScrollEvent,
+        handleScroll,
         isTyping: contact?.is_typing,
     };
 }
