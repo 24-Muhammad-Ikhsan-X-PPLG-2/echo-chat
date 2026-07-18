@@ -28,7 +28,7 @@ const MessageGroupList: FC<Props> = ({ groups, fetchNextPage }) => {
         >
             {groups.map((group) => (
                 <div key={group.date}>
-                    <div className="sticky top-3 z-10 mb-5 flex justify-center">
+                    <div className="sticky top-3 z-10 mb-5 flex justify-center pb-4">
                         <span className="rounded-full border border-gray-300 bg-white px-3 py-1 text-sm font-medium shadow">
                             {getDateLabel(group.date)}
                         </span>
