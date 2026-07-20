@@ -89,6 +89,7 @@ export function useMessageListScroll({ groups, fetchNextPage }: Props) {
     }, [fetchNextPage]);
 
     // menjaga posisi scroll setelah prepend message
+    // pake useLayoutEffect karena biar menjaga posisi scroll pada saat state sudah berubah.
     useLayoutEffect(() => {
         if (!isLoadingMore.current) return;
 

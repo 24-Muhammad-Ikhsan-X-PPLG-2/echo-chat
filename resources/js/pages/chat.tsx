@@ -9,6 +9,8 @@ import Sidebar from '@/features/chat/components/Sidebar';
 import { contactSort } from '@/lib/utils';
 import { useChatStore, useStateGlobal } from '@/stores/chatStore';
 import type { Conversation } from '@/types/conversation';
+import PermissionAudioModal from '@/features/chat/components/PermissionAudioModal';
+import { unlockAudio } from '@/features/chat/playSoundNotif';
 
 type Props = {
     conversations: Conversation;
@@ -20,7 +22,8 @@ const Chat: FC<Props> = ({ conversations }) => {
 
     return (
         <>
-            <ImageModal/>
+            <ImageModal />
+            <PermissionAudioModal/>
             <div className="relative flex overflow-hidden bg-white font-['Space_Grotesk']">
                 <Sidebar />
                 {showAddContact ? <AddContact /> : <Contacts />}
@@ -36,6 +39,24 @@ const useChat = ({ conversations }: { conversations: Conversation }) => {
     useEffect(() => {
         setContacts(contactSort(conversations.data));
     }, [conversations, setContacts]);
+    useEffect(() => {
+        if (localStorage.getItem('notification-sound') !== "true") {
+            return;
+        }
+
+        const unlock = () => {
+            unlockAudio();
+            window.removeEventListener("pointerdown", unlock);
+            window.removeEventListener("keydown", unlock);
+        }
+        window.addEventListener("pointerdown", unlock);
+        window.addEventListener("keydown", unlock);
+
+        return () => {
+            window.removeEventListener("pointerdown", unlock);
+            window.removeEventListener("keydown", unlock);
+        }
+    }, [])
 };
 
 export default Chat;

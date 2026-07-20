@@ -1,5 +1,6 @@
 import { usePage } from '@inertiajs/react';
-import { useEffect } from 'react';
+import { useCallback, useEffect } from 'react';
+import { toast } from 'react-toastify';
 import echo from '@/lib/echo';
 import { KeyStorage } from '@/lib/key-storage';
 import { contactSort, fetchApi } from '@/lib/utils';
@@ -9,11 +10,16 @@ import type {
     ConversationUnread,
 } from '@/types/conversation';
 import { E2EE, SharedKeyCache } from '../e2ee';
+import { showMessageToast } from '../showMessageToast';
+import { playNotificationSound } from '../playSoundNotif';
 
 const useChatWindow = () => {
     const setContacts = useChatStore((state) => state.setContacts);
     const selectedConversation = useChatStore(
         (state) => state.selectedConversation,
+    );
+    const setSelectedConversation = useChatStore(
+        (state) => state.setSelectedConversation,
     );
     const {
         auth: { user },
@@ -114,6 +120,20 @@ const useChatWindow = () => {
             setContacts((prev) => {
                 if (!prev) {
                     return prev;
+                }
+
+                const contact = prev.find(
+                    (item) => item.contact.id === event.user_id,
+                );
+
+                if (contact) {
+                    playNotificationSound();
+                    showMessageToast({
+                        name: contact.contact.username,
+                        onClick: () => {
+                            setSelectedConversation(contact)
+                        },
+                    });
                 }
 
                 return prev.map((item) =>

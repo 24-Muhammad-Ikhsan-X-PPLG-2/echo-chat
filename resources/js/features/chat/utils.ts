@@ -1,7 +1,7 @@
-import dayjs from 'dayjs';
-import type { ChatData } from '@/types/chat';
 import imageCompression from 'browser-image-compression';
+import dayjs from 'dayjs';
 import { toast } from 'react-toastify';
+import type { ChatData } from '@/types/chat';
 
 export const groupedMessages = (messages: ChatData[] | undefined) => {
     if (!messages) {
